@@ -57,3 +57,4 @@ logs/
 
 # Claude Code
 .claude/
+.task-worktrees

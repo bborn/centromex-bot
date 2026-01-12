@@ -45,6 +45,7 @@ func main() {
 		VolunteerChat:  config.VolunteerChat,
 		CoordinatorIDs: config.CoordinatorIDs,
 		WebhookURL:     config.WebhookURL,
+		WebhookSecret:  config.WebhookSecret,
 	}, database, trans)
 	if err != nil {
 		log.Fatalf("Failed to initialize bot: %v", err)
@@ -80,6 +81,7 @@ type Config struct {
 	DBKey          string
 	ModelPath      string
 	WebhookURL     string
+	WebhookSecret  string
 }
 
 func loadConfig() Config {
@@ -88,7 +90,8 @@ func loadConfig() Config {
 		DBPath:        getEnvOrDefault("DB_PATH", "./data/centromex.db"),
 		DBKey:         mustGetEnv("DB_ENCRYPTION_KEY"),
 		ModelPath:     getEnvOrDefault("MODEL_PATH", "./models/llama-3.2-3b.Q4_K_M.gguf"),
-		WebhookURL:    os.Getenv("WEBHOOK_URL"), // Optional - if set, uses webhook mode
+		WebhookURL:    os.Getenv("WEBHOOK_URL"),    // Optional - if set, uses webhook mode
+		WebhookSecret: os.Getenv("WEBHOOK_SECRET"), // Secret token for webhook verification
 	}
 
 	// Parse volunteer chat ID

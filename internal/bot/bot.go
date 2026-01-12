@@ -23,6 +23,7 @@ type Bot struct {
 	volunteerChat  int64 // Telegram chat ID for volunteer group
 	coordinatorIDs []int64
 	webhookURL     string
+	webhookSecret  string
 }
 
 type Config struct {
@@ -30,6 +31,7 @@ type Config struct {
 	VolunteerChat  int64
 	CoordinatorIDs []int64
 	WebhookURL     string // If set, use webhook mode; otherwise use polling
+	WebhookSecret  string // Secret token for webhook verification
 }
 
 func New(cfg Config, database *db.DB, trans *translator.Translator) (*Bot, error) {
@@ -47,6 +49,7 @@ func New(cfg Config, database *db.DB, trans *translator.Translator) (*Bot, error
 		volunteerChat:  cfg.VolunteerChat,
 		coordinatorIDs: cfg.CoordinatorIDs,
 		webhookURL:     cfg.WebhookURL,
+		webhookSecret:  cfg.WebhookSecret,
 	}, nil
 }
 
@@ -66,12 +69,17 @@ func (b *Bot) runWebhook() error {
 		return fmt.Errorf("failed to create webhook config: %w", err)
 	}
 
+	// Set secret token for webhook verification
+	if b.webhookSecret != "" {
+		webhookConfig.SecretToken = b.webhookSecret
+	}
+
 	_, err = b.api.Request(webhookConfig)
 	if err != nil {
 		return fmt.Errorf("failed to set webhook: %w", err)
 	}
 
-	log.Printf("Webhook set to %s/webhook", b.webhookURL)
+	log.Printf("Webhook set to %s/webhook (with secret token)", b.webhookURL)
 
 	// Set up HTTP handlers
 	http.HandleFunc("/webhook", b.handleWebhook)
@@ -89,6 +97,16 @@ func (b *Bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+
+	// Verify secret token if configured
+	if b.webhookSecret != "" {
+		token := r.Header.Get("X-Telegram-Bot-Api-Secret-Token")
+		if token != b.webhookSecret {
+			log.Printf("Invalid webhook secret token")
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -136,6 +154,12 @@ func (b *Bot) runPolling() error {
 // processUpdate handles a single Telegram update
 func (b *Bot) processUpdate(update tgbotapi.Update) {
 	if update.Message == nil {
+		return
+	}
+
+	// Check for new members joining the group
+	if update.Message.NewChatMembers != nil {
+		b.handleNewMembers(update.Message)
 		return
 	}
 
@@ -216,6 +240,64 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 
 	// For non-command messages from non-coordinators, just acknowledge
 	b.sendMessage(msg.Chat.ID, "Use /help to see available commands.")
+}
+
+// handleNewMembers sends a welcome message when someone joins the volunteer group
+func (b *Bot) handleNewMembers(msg *tgbotapi.Message) {
+	// Only send welcome in the volunteer group chat
+	if msg.Chat.ID != b.volunteerChat {
+		return
+	}
+
+	for _, member := range msg.NewChatMembers {
+		// Skip if the bot itself joined
+		if member.ID == b.api.Self.ID {
+			continue
+		}
+
+		// Get the new member's name
+		name := member.FirstName
+		if name == "" {
+			name = "there"
+		}
+
+		// Send welcome message to the group
+		welcome := fmt.Sprintf(`Welcome %s! Thank you for joining Centromex Grocery Volunteers.
+
+HOW THIS WORKS:
+Families in our community need help getting groceries. When a request comes in, you'll see it posted here with a shopping list and budget.
+
+COMMANDS:
+/list - See open grocery requests
+/claim <id> - Claim a request to shop for
+/mine - See requests you've claimed
+/done <id> - Mark a delivery as complete
+/help - Full command list
+
+QUICK START:
+1. When you see a request, type /claim followed by the request number
+2. You'll receive the address via DM (private message)
+3. Shop for the items, deliver them, then type /done with the request number
+
+Questions? Reach out to a coordinator. We're glad you're here!`, name)
+
+		b.sendMessage(msg.Chat.ID, welcome)
+
+		// Also register them as a volunteer (not yet approved)
+		username := member.UserName
+		displayName := member.FirstName
+		if member.LastName != "" {
+			displayName += " " + member.LastName
+		}
+
+		err := b.db.AddVolunteer(member.ID, username, displayName, false)
+		if err != nil {
+			log.Printf("Error registering new volunteer %d: %v", member.ID, err)
+		}
+
+		// Notify coordinators
+		b.notifyCoordinators(fmt.Sprintf("New volunteer joined: %s (@%s, ID: %d)", displayName, username, member.ID))
+	}
 }
 
 func (b *Bot) handleList(msg *tgbotapi.Message) {
@@ -438,11 +520,6 @@ func (b *Bot) handleAddress(msg *tgbotapi.Message, userID int64) {
 }
 
 func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
-	if !b.isCoordinator(userID) {
-		b.sendMessage(msg.Chat.ID, "Only coordinators can view request details.")
-		return
-	}
-
 	requestID, err := parseID(msg.CommandArguments())
 	if err != nil {
 		b.sendMessage(msg.Chat.ID, "Usage: /view <request_id>\nExample: /view 1")
@@ -455,32 +532,44 @@ func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
 		return
 	}
 
-	address, _ := b.db.GetAddress(requestID)
-	if address == "" {
-		address = "(not set)"
-	}
+	isCoord := b.isCoordinator(userID)
+	isUnclaimed := req.Status == "posted" || req.Status == "new"
 
+	// Build the response
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("━━━ REQUEST #%d ━━━\n\n", req.ID))
 	sb.WriteString(fmt.Sprintf("Status: %s\n", req.Status))
-	sb.WriteString(fmt.Sprintf("Budget: %s\n", req.Budget))
-	sb.WriteString(fmt.Sprintf("Address: %s\n\n", address))
-	sb.WriteString("Original (Spanish):\n")
-	sb.WriteString(req.OriginalText)
-	sb.WriteString("\n\n")
-	sb.WriteString("Translated:\n")
+	if req.Budget != "" {
+		sb.WriteString(fmt.Sprintf("Budget: %s\n", req.Budget))
+	}
+
+	// Only coordinators see address, and only via DM
+	if isCoord {
+		address, _ := b.db.GetAddress(requestID)
+		if address == "" {
+			address = "(not set)"
+		}
+		sb.WriteString(fmt.Sprintf("Address: %s\n", address))
+	}
+
+	sb.WriteString("\nShopping list:\n")
 	sb.WriteString(req.TranslatedText)
 
 	if req.ClaimedByName != "" {
 		sb.WriteString(fmt.Sprintf("\n\nClaimed by: %s", req.ClaimedByName))
 	}
 
-	// Always send to user's DM to protect address privacy
-	b.sendMessage(userID, sb.String())
-
-	// If sent from group, acknowledge there
-	if msg.Chat.ID != userID {
-		b.sendMessage(msg.Chat.ID, "📬 Details sent to your DM.")
+	// Unclaimed requests: show in group (no address shown to non-coordinators)
+	// Claimed requests or coordinator viewing: send to DM for privacy
+	if isUnclaimed && !isCoord {
+		// Show in group - anyone can see unclaimed request details
+		b.sendMessage(msg.Chat.ID, sb.String())
+	} else {
+		// Send to DM (coordinator sees address, or request is claimed)
+		b.sendMessage(userID, sb.String())
+		if msg.Chat.ID != userID {
+			b.sendMessage(msg.Chat.ID, "📬 Details sent to your DM.")
+		}
 	}
 }
 
