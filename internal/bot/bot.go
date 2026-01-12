@@ -523,21 +523,12 @@ func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
 	isCoord := b.isCoordinator(userID)
 	isUnclaimed := req.Status == "posted" || req.Status == "new"
 
-	// Build the response
+	// Build the public response (no address)
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("━━━ REQUEST #%d ━━━\n\n", req.ID))
 	sb.WriteString(fmt.Sprintf("Status: %s\n", req.Status))
 	if req.Budget != "" {
 		sb.WriteString(fmt.Sprintf("Budget: %s\n", req.Budget))
-	}
-
-	// Only coordinators see address, and only via DM
-	if isCoord {
-		address, _ := b.db.GetAddress(requestID)
-		if address == "" {
-			address = "(not set)"
-		}
-		sb.WriteString(fmt.Sprintf("Address: %s\n", address))
 	}
 
 	sb.WriteString("\nShopping list:\n")
@@ -547,13 +538,25 @@ func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
 		sb.WriteString(fmt.Sprintf("\n\nClaimed by: %s", req.ClaimedByName))
 	}
 
-	// Unclaimed requests: show in group (no address shown to non-coordinators)
-	// Claimed requests or coordinator viewing: send to DM for privacy
-	if isUnclaimed && !isCoord {
-		// Show in group - anyone can see unclaimed request details
+	if isUnclaimed {
+		// Unclaimed: show in group for everyone
 		b.sendMessage(msg.Chat.ID, sb.String())
+
+		// Coordinator also gets address via DM
+		if isCoord {
+			address, _ := b.db.GetAddress(requestID)
+			if address != "" {
+				b.sendMessage(userID, fmt.Sprintf("📍 Address for #%d: %s", requestID, address))
+			}
+		}
 	} else {
-		// Send to DM (coordinator sees address, or request is claimed)
+		// Claimed: send full details to DM
+		if isCoord {
+			address, _ := b.db.GetAddress(requestID)
+			if address != "" {
+				sb.WriteString(fmt.Sprintf("\n\n📍 Address: %s", address))
+			}
+		}
 		b.sendMessage(userID, sb.String())
 		if msg.Chat.ID != userID {
 			b.sendMessage(msg.Chat.ID, "📬 Details sent to your DM.")
