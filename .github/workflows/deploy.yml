@@ -9,30 +9,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger sprite rebuild
-        env:
-          SPRITES_TOKEN: ${{ secrets.SPRITES_TOKEN }}
-        run: |
-          # Stop existing bot
-          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
-            -H "Authorization: Bearer $SPRITES_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"command": ["pkill", "-f", "./bot"]}' || true
+      - name: Install Sprites CLI
+        run: curl -fsSL https://sprites.dev/install.sh | bash
 
+      - name: Configure Sprites Auth
+        run: ~/.local/bin/sprite auth setup --token "${{ secrets.SPRITES_TOKEN }}"
+
+      - name: Deploy
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # Stop existing bot
+          sprite -s centromex-bot exec pkill -f './bot' || true
           sleep 2
 
-          # Pull latest code and rebuild
-          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
-            -H "Authorization: Bearer $SPRITES_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"command": ["sh", "-c", "cd /home/sprite/centromex && git pull origin main && go build -o bot ./cmd/bot"]}'
+          # Pull latest and rebuild
+          sprite -s centromex-bot exec sh -c 'cd /home/sprite/centromex && git pull origin main && go build -o bot ./cmd/bot'
 
-          sleep 5
+          # Start bot
+          sprite -s centromex-bot exec sh -c 'cd /home/sprite/centromex && export $(cat .env | xargs) && nohup ./bot > bot.log 2>&1 &'
 
-          # Start the bot in background
-          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
-            -H "Authorization: Bearer $SPRITES_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"command": ["sh", "-c", "cd /home/sprite/centromex && ./bot &"]}'
+          sleep 3
 
-          echo "Deployment triggered!"
+          # Verify
+          curl -f https://centromex-bot-74l.sprites.app/health && echo " - Deploy successful!"
