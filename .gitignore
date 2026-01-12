@@ -1,0 +1,59 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bot
+/centromex-bot
+
+# Test binary
+*.test
+
+# Output of go build
+/bin/
+/dist/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Dependencies
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Model files (too large for git)
+*.gguf
+*.bin
+/models/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+/tmp/
+
+# Claude Code
+.claude/
