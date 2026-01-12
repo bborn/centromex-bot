@@ -1,8 +1,11 @@
 package bot
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,12 +23,14 @@ type Bot struct {
 	translator     *translator.Translator
 	volunteerChat  int64 // Telegram chat ID for volunteer group
 	coordinatorIDs []int64
+	webhookURL     string
 }
 
 type Config struct {
-	Token         string
-	VolunteerChat int64
+	Token          string
+	VolunteerChat  int64
 	CoordinatorIDs []int64
+	WebhookURL     string // If set, use webhook mode; otherwise use polling
 }
 
 func New(cfg Config, database *db.DB, trans *translator.Translator) (*Bot, error) {
@@ -42,28 +47,104 @@ func New(cfg Config, database *db.DB, trans *translator.Translator) (*Bot, error
 		translator:     trans,
 		volunteerChat:  cfg.VolunteerChat,
 		coordinatorIDs: cfg.CoordinatorIDs,
+		webhookURL:     cfg.WebhookURL,
 	}, nil
 }
 
+// Run starts the bot in either webhook or polling mode
 func (b *Bot) Run() error {
+	if b.webhookURL != "" {
+		return b.runWebhook()
+	}
+	return b.runPolling()
+}
+
+// runWebhook starts an HTTP server for Telegram webhook updates
+func (b *Bot) runWebhook() error {
+	// Set up the webhook with Telegram
+	webhookConfig, err := tgbotapi.NewWebhook(b.webhookURL + "/webhook")
+	if err != nil {
+		return fmt.Errorf("failed to create webhook config: %w", err)
+	}
+
+	_, err = b.api.Request(webhookConfig)
+	if err != nil {
+		return fmt.Errorf("failed to set webhook: %w", err)
+	}
+
+	log.Printf("Webhook set to %s/webhook", b.webhookURL)
+
+	// Set up HTTP handlers
+	http.HandleFunc("/webhook", b.handleWebhook)
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	log.Println("Starting webhook server on :8080")
+	return http.ListenAndServe(":8080", nil)
+}
+
+// handleWebhook processes incoming Telegram updates via HTTP
+func (b *Bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading webhook body: %v", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	var update tgbotapi.Update
+	if err := json.Unmarshal(body, &update); err != nil {
+		log.Printf("Error parsing webhook update: %v", err)
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Process the update
+	b.processUpdate(update)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// runPolling uses long polling for updates (for local development)
+func (b *Bot) runPolling() error {
+	// Remove any existing webhook
+	_, err := b.api.Request(tgbotapi.DeleteWebhookConfig{})
+	if err != nil {
+		log.Printf("Warning: could not remove webhook: %v", err)
+	}
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
 	updates := b.api.GetUpdatesChan(u)
 
-	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
+	log.Println("Starting polling mode")
 
-		if update.Message.IsCommand() {
-			b.handleCommand(update.Message)
-		} else {
-			b.handleMessage(update.Message)
-		}
+	for update := range updates {
+		b.processUpdate(update)
 	}
 
 	return nil
+}
+
+// processUpdate handles a single Telegram update
+func (b *Bot) processUpdate(update tgbotapi.Update) {
+	if update.Message == nil {
+		return
+	}
+
+	if update.Message.IsCommand() {
+		b.handleCommand(update.Message)
+	} else {
+		b.handleMessage(update.Message)
+	}
 }
 
 func (b *Bot) handleCommand(msg *tgbotapi.Message) {
