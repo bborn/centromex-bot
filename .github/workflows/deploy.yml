@@ -1,0 +1,38 @@
+name: Deploy to Sprites
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger sprite rebuild
+        env:
+          SPRITES_TOKEN: ${{ secrets.SPRITES_TOKEN }}
+        run: |
+          # Stop existing bot
+          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
+            -H "Authorization: Bearer $SPRITES_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"command": ["pkill", "-f", "./bot"]}' || true
+
+          sleep 2
+
+          # Pull latest code and rebuild
+          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
+            -H "Authorization: Bearer $SPRITES_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"command": ["sh", "-c", "cd /home/sprite/centromex && git pull origin main && go build -o bot ./cmd/bot"]}'
+
+          sleep 5
+
+          # Start the bot in background
+          curl -s -X POST "https://api.sprites.dev/v1/sprites/centromex-bot/exec" \
+            -H "Authorization: Bearer $SPRITES_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"command": ["sh", "-c", "cd /home/sprite/centromex && ./bot &"]}'
+
+          echo "Deployment triggered!"
