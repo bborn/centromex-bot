@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -52,7 +53,7 @@ type openAIResponse struct {
 func (t *Translator) TranslateRequest(spanishText string) (string, error) {
 	// If no API key, return Spanish as-is
 	if t.apiKey == "" {
-		return spanishText, nil
+		return spanishText, fmt.Errorf("no OpenAI API key configured")
 	}
 
 	prompt := fmt.Sprintf(`Translate this Spanish grocery list to English. Format as a bulleted list with • bullets.
@@ -88,33 +89,42 @@ Respond ONLY with the English bulleted list, nothing else.`, spanishText)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("OpenAI API request failed: %v", err)
 		return "", fmt.Errorf("API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Printf("Failed to read OpenAI response: %v", err)
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
+	log.Printf("OpenAI API response status: %d, body: %s", resp.StatusCode, string(body))
+
 	var openAIResp openAIResponse
 	if err := json.Unmarshal(body, &openAIResp); err != nil {
+		log.Printf("Failed to parse OpenAI response: %v", err)
 		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	if openAIResp.Error != nil {
+		log.Printf("OpenAI API error: %s", openAIResp.Error.Message)
 		return "", fmt.Errorf("OpenAI API error: %s", openAIResp.Error.Message)
 	}
 
 	if len(openAIResp.Choices) == 0 {
-		return spanishText, nil // Fallback to original
+		log.Printf("No choices in OpenAI response, falling back to original")
+		return spanishText, fmt.Errorf("no translation returned from OpenAI")
 	}
 
 	translation := strings.TrimSpace(openAIResp.Choices[0].Message.Content)
 	if translation == "" {
-		return spanishText, nil
+		log.Printf("Empty translation from OpenAI, falling back to original")
+		return spanishText, fmt.Errorf("empty translation from OpenAI")
 	}
 
+	log.Printf("Translation successful: %d chars -> %d chars", len(spanishText), len(translation))
 	return translation, nil
 }
 
