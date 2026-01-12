@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -24,6 +25,8 @@ type Bot struct {
 	coordinatorIDs []int64
 	webhookURL     string
 	webhookSecret  string
+	processedIDs   map[int]bool // Track processed update IDs to prevent duplicates
+	processMutex   sync.Mutex   // Protects processedIDs map
 }
 
 type Config struct {
@@ -50,6 +53,7 @@ func New(cfg Config, database *db.DB, trans *translator.Translator) (*Bot, error
 		coordinatorIDs: cfg.CoordinatorIDs,
 		webhookURL:     cfg.WebhookURL,
 		webhookSecret:  cfg.WebhookSecret,
+		processedIDs:   make(map[int]bool),
 	}, nil
 }
 
@@ -111,10 +115,11 @@ func (b *Bot) handleWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Process the update
-	b.processUpdate(update)
-
+	// Respond immediately to avoid Telegram timeout
 	w.WriteHeader(http.StatusOK)
+
+	// Process the update asynchronously (especially important for slow LLM translations)
+	go b.processUpdate(update)
 }
 
 // runPolling uses long polling for updates (for local development)
@@ -144,6 +149,23 @@ func (b *Bot) processUpdate(update tgbotapi.Update) {
 	if update.Message == nil {
 		return
 	}
+
+	// Prevent duplicate processing (Telegram may retry on timeout)
+	b.processMutex.Lock()
+	if b.processedIDs[update.UpdateID] {
+		b.processMutex.Unlock()
+		log.Printf("Skipping duplicate update %d", update.UpdateID)
+		return
+	}
+	b.processedIDs[update.UpdateID] = true
+
+	// Clean up old IDs periodically (keep last 1000)
+	if len(b.processedIDs) > 1000 {
+		// Simple cleanup: remove all but keep tracking active
+		b.processedIDs = make(map[int]bool)
+		b.processedIDs[update.UpdateID] = true
+	}
+	b.processMutex.Unlock()
 
 	// Check for new members joining the group
 	if update.Message.NewChatMembers != nil {
