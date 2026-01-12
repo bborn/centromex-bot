@@ -305,28 +305,58 @@ func (b *Bot) handleList(msg *tgbotapi.Message) {
 	sb.WriteString(fmt.Sprintf("📋 OPEN REQUESTS (%d)\n\n", len(requests)))
 
 	for _, req := range requests {
-		sb.WriteString(fmt.Sprintf("━━━ #%d ", req.ID))
+		sb.WriteString(fmt.Sprintf("━━━ #%d", req.ID))
 		if req.Zone != "" {
-			sb.WriteString(fmt.Sprintf("• %s ", req.Zone))
-		}
-		if req.Budget != "" {
-			sb.WriteString(fmt.Sprintf("• %s", req.Budget))
+			sb.WriteString(fmt.Sprintf(" • %s", req.Zone))
 		}
 		sb.WriteString("\n")
 
-		// Show truncated list
+		if req.Budget != "" {
+			sb.WriteString(fmt.Sprintf("💵 %s\n", req.Budget))
+		}
+
+		// Show preview of shopping list
 		lines := strings.Split(req.TranslatedText, "\n")
 		shown := 0
+		const maxPreviewItems = 5
+
 		for _, line := range lines {
-			if strings.HasPrefix(line, "•") && shown < 3 {
-				sb.WriteString(line + "\n")
-				shown++
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+
+			// Show lines that start with bullet or are numbered
+			if strings.HasPrefix(line, "•") || strings.HasPrefix(line, "-") ||
+			   (len(line) > 2 && line[0] >= '0' && line[0] <= '9' && line[1] == '.') {
+				if shown < maxPreviewItems {
+					sb.WriteString(line + "\n")
+					shown++
+				}
 			}
 		}
-		if shown < countItems(req.TranslatedText) {
-			sb.WriteString(fmt.Sprintf("   ...and %d more items\n", countItems(req.TranslatedText)-shown))
+
+		// If no formatted items found, show first non-empty line
+		if shown == 0 {
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line != "" {
+					preview := line
+					if len(preview) > 60 {
+						preview = preview[:60] + "..."
+					}
+					sb.WriteString(preview + "\n")
+					break
+				}
+			}
 		}
-		sb.WriteString(fmt.Sprintf("→ /claim %d\n\n", req.ID))
+
+		totalItems := countItems(req.TranslatedText)
+		if shown > 0 && shown < totalItems {
+			sb.WriteString(fmt.Sprintf("   ...and %d more items\n", totalItems-shown))
+		}
+
+		sb.WriteString(fmt.Sprintf("\n→ /claim %d or /view %d for full list\n\n", req.ID, req.ID))
 	}
 
 	b.sendMessage(msg.Chat.ID, sb.String())
