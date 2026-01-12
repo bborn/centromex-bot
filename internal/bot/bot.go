@@ -410,8 +410,16 @@ func (b *Bot) handleClaim(msg *tgbotapi.Message, userID int64) {
 	response := fmt.Sprintf("✅ CLAIMED! Request #%d is yours.\n\n", requestID)
 	response += fmt.Sprintf("📍 ADDRESS:\n%s\n\n", address)
 	response += fmt.Sprintf("💵 BUDGET: %s\n\n", req.Budget)
-	response += "SHOPPING LIST:\n"
+	response += "📝 SHOPPING LIST (English):\n"
 	response += req.TranslatedText
+
+	// Show original Spanish as backup
+	if req.OriginalText != "" && req.OriginalText != req.TranslatedText {
+		response += "\n\n━━━━━━━━━━━━━━━━━━━━━━━━"
+		response += "\n🇪🇸 Original (Spanish):\n"
+		response += req.OriginalText
+	}
+
 	response += fmt.Sprintf("\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nWhen done: /done %d", requestID)
 
 	b.sendMessage(userID, response) // Send to user's DM
@@ -561,8 +569,15 @@ func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
 		sb.WriteString(fmt.Sprintf("Budget: %s\n", req.Budget))
 	}
 
-	sb.WriteString("\nShopping list:\n")
+	sb.WriteString("\n📝 Shopping list (English):\n")
 	sb.WriteString(req.TranslatedText)
+
+	// Show original Spanish as backup
+	if req.OriginalText != "" && req.OriginalText != req.TranslatedText {
+		sb.WriteString("\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		sb.WriteString("\n🇪🇸 Original (Spanish):\n")
+		sb.WriteString(req.OriginalText)
+	}
 
 	if req.ClaimedByName != "" {
 		sb.WriteString(fmt.Sprintf("\n\nClaimed by: %s", req.ClaimedByName))
