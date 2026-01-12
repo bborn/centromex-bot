@@ -13,7 +13,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/centromex/grocery-bot/internal/db"
-	"github.com/centromex/grocery-bot/internal/models"
 	"github.com/centromex/grocery-bot/internal/translator"
 )
 
@@ -196,6 +195,12 @@ func (b *Bot) handleCommand(msg *tgbotapi.Message) {
 	case "approve":
 		b.handleApprove(msg, userID)
 
+	case "address":
+		b.handleAddress(msg, userID)
+
+	case "view":
+		b.handleView(msg, userID)
+
 	default:
 		b.sendMessage(msg.Chat.ID, "Unknown command. Use /help to see available commands.")
 	}
@@ -205,7 +210,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 	// Check if this is a coordinator forwarding a request
 	if b.isCoordinator(msg.From.ID) && msg.ForwardDate != 0 {
 		// This is a forwarded message from coordinator - treat as new request
-		b.createRequest(msg.Chat.ID, msg.Text, "", "")
+		b.createRequest(msg.Chat.ID, msg.Text, "", "", "")
 		return
 	}
 
@@ -301,21 +306,23 @@ func (b *Bot) handleClaim(msg *tgbotapi.Message, userID int64) {
 		address = "Address not available - contact coordinator"
 	}
 
-	// Send confirmation with full details via DM
+	// Send confirmation with full details via DM (not group!)
 	response := fmt.Sprintf("✅ CLAIMED! Request #%d is yours.\n\n", requestID)
-	response += fmt.Sprintf("📍 ADDRESS (private):\n%s\n\n", address)
+	response += fmt.Sprintf("📍 ADDRESS:\n%s\n\n", address)
 	response += fmt.Sprintf("💵 BUDGET: %s\n\n", req.Budget)
 	response += "SHOPPING LIST:\n"
 	response += req.TranslatedText
 	response += fmt.Sprintf("\n\n━━━━━━━━━━━━━━━━━━━━━━━━\nWhen done: /done %d", requestID)
 
-	b.sendMessage(msg.Chat.ID, response)
+	b.sendMessage(userID, response) // Send to user's DM
+
+	// Acknowledge in group if that's where the claim was made
+	if msg.Chat.ID != userID {
+		b.sendMessage(msg.Chat.ID, fmt.Sprintf("✅ Request #%d claimed by %s. Details sent via DM.", requestID, volunteerName))
+	}
 
 	// Notify coordinator
 	b.notifyCoordinators(fmt.Sprintf("✋ Request #%d claimed by %s", requestID, volunteerName))
-
-	// Notify volunteer group
-	b.sendMessage(b.volunteerChat, fmt.Sprintf("✋ Request #%d claimed by %s", requestID, volunteerName))
 }
 
 func (b *Bot) handleMine(msg *tgbotapi.Message, userID int64) {
@@ -386,16 +393,98 @@ func (b *Bot) handleNew(msg *tgbotapi.Message, userID int64) {
 		return
 	}
 
-	text := msg.CommandArguments()
-	if text == "" {
-		b.sendMessage(msg.Chat.ID, "Usage: /new <spanish text>\n\nOr just forward a WhatsApp message to me.")
+	// Only allow /new via DM to protect family info
+	if msg.Chat.ID != userID {
+		b.sendMessage(msg.Chat.ID, "⚠️ Please send /new via DM to protect family information.")
 		return
 	}
 
-	b.createRequest(msg.Chat.ID, text, "", "")
+	text := msg.CommandArguments()
+	if text == "" {
+		b.sendMessage(msg.Chat.ID, "Usage: /new <spanish grocery list>\n\nExample:\n/new 2 libras de arroz, 1 pollo, 3 aguacates")
+		return
+	}
+
+	b.createRequest(msg.Chat.ID, text, "", "", "")
 }
 
-func (b *Bot) createRequest(chatID int64, spanishText string, budget string, zone string) {
+func (b *Bot) handleAddress(msg *tgbotapi.Message, userID int64) {
+	if !b.isCoordinator(userID) {
+		b.sendMessage(msg.Chat.ID, "Only coordinators can set addresses.")
+		return
+	}
+
+	args := msg.CommandArguments()
+	parts := strings.SplitN(args, " ", 2)
+	if len(parts) < 2 {
+		b.sendMessage(msg.Chat.ID, "Usage: /address <request_id> <address>\nExample: /address 1 123 Main St, St Paul MN 55101")
+		return
+	}
+
+	requestID, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		b.sendMessage(msg.Chat.ID, "Invalid request ID.")
+		return
+	}
+
+	address := strings.TrimSpace(parts[1])
+	err = b.db.SaveAddress(requestID, address)
+	if err != nil {
+		b.sendMessage(msg.Chat.ID, fmt.Sprintf("Error saving address: %v", err))
+		return
+	}
+
+	b.sendMessage(msg.Chat.ID, fmt.Sprintf("✅ Address saved for request #%d", requestID))
+}
+
+func (b *Bot) handleView(msg *tgbotapi.Message, userID int64) {
+	if !b.isCoordinator(userID) {
+		b.sendMessage(msg.Chat.ID, "Only coordinators can view request details.")
+		return
+	}
+
+	requestID, err := parseID(msg.CommandArguments())
+	if err != nil {
+		b.sendMessage(msg.Chat.ID, "Usage: /view <request_id>\nExample: /view 1")
+		return
+	}
+
+	req, err := b.db.GetRequest(requestID)
+	if err != nil {
+		b.sendMessage(msg.Chat.ID, fmt.Sprintf("Request #%d not found.", requestID))
+		return
+	}
+
+	address, _ := b.db.GetAddress(requestID)
+	if address == "" {
+		address = "(not set)"
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("━━━ REQUEST #%d ━━━\n\n", req.ID))
+	sb.WriteString(fmt.Sprintf("Status: %s\n", req.Status))
+	sb.WriteString(fmt.Sprintf("Budget: %s\n", req.Budget))
+	sb.WriteString(fmt.Sprintf("Address: %s\n\n", address))
+	sb.WriteString("Original (Spanish):\n")
+	sb.WriteString(req.OriginalText)
+	sb.WriteString("\n\n")
+	sb.WriteString("Translated:\n")
+	sb.WriteString(req.TranslatedText)
+
+	if req.ClaimedByName != "" {
+		sb.WriteString(fmt.Sprintf("\n\nClaimed by: %s", req.ClaimedByName))
+	}
+
+	// Always send to user's DM to protect address privacy
+	b.sendMessage(userID, sb.String())
+
+	// If sent from group, acknowledge there
+	if msg.Chat.ID != userID {
+		b.sendMessage(msg.Chat.ID, "📬 Details sent to your DM.")
+	}
+}
+
+func (b *Bot) createRequest(chatID int64, spanishText string, budget string, zone string, address string) {
 	// Extract budget if present in text
 	if budget == "" {
 		budget = extractBudget(spanishText)
@@ -407,6 +496,14 @@ func (b *Bot) createRequest(chatID int64, spanishText string, budget string, zon
 		b.sendMessage(chatID, "Error creating request. Please try again.")
 		log.Printf("Error creating request: %v", err)
 		return
+	}
+
+	// Save address if provided
+	if address != "" {
+		err = b.db.SaveAddress(req.ID, address)
+		if err != nil {
+			log.Printf("Error saving address: %v", err)
+		}
 	}
 
 	b.sendMessage(chatID, fmt.Sprintf("📝 Request #%d created. Translating...", req.ID))
@@ -429,8 +526,11 @@ func (b *Bot) createRequest(chatID int64, spanishText string, budget string, zon
 	formatted := b.translator.FormatRequest(req.ID, zone, budget, translated)
 	b.sendMessage(b.volunteerChat, formatted)
 
-	b.sendMessage(chatID, fmt.Sprintf("✅ Request #%d posted to volunteers.\n\n"+
-		"Now send me the address (I'll store it securely and only share with the volunteer who claims).", req.ID))
+	if address != "" {
+		b.sendMessage(chatID, fmt.Sprintf("✅ Request #%d posted to volunteers with address.", req.ID))
+	} else {
+		b.sendMessage(chatID, fmt.Sprintf("✅ Request #%d posted to volunteers.\n\nTo add address: /address %d <address>", req.ID, req.ID))
+	}
 }
 
 func (b *Bot) handleStatus(msg *tgbotapi.Message, userID int64) {
