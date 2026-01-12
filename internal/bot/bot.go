@@ -655,24 +655,36 @@ func (b *Bot) createRequest(chatID int64, spanishText string, budget string, zon
 
 	b.sendMessage(chatID, fmt.Sprintf("📝 Request #%d created. Translating...", req.ID))
 
-	// Translate using LLM
-	translated, err := b.translator.TranslateRequest(spanishText)
+	// Translate using LLM (extracts PII like address/phone)
+	result, err := b.translator.TranslateRequest(spanishText)
 	if err != nil {
 		b.sendMessage(chatID, fmt.Sprintf("Error translating request #%d: %v", req.ID, err))
 		log.Printf("Error translating request: %v", err)
 		return
 	}
 
-	// Update with translation
-	err = b.db.UpdateRequestTranslation(req.ID, translated)
+	// Update with cleaned translation (safe for public posting)
+	err = b.db.UpdateRequestTranslation(req.ID, result.CleanedText)
 	if err != nil {
 		log.Printf("Error updating translation: %v", err)
 	}
 
-	// Format and post to volunteer channel
-	formatted := b.translator.FormatRequest(req.ID, zone, budget, translated)
+	// Save extracted address if found (unless already provided)
+	if address == "" && result.Address != "" {
+		address = result.Address
+		err = b.db.SaveAddress(req.ID, address)
+		if err != nil {
+			log.Printf("Error saving extracted address: %v", err)
+		} else {
+			log.Printf("Extracted and saved address for request #%d", req.ID)
+		}
+	}
+
+	// Format and post to volunteer channel (only cleaned translation, no PII)
+	formatted := b.translator.FormatRequest(req.ID, zone, budget, result.CleanedText)
 	b.sendMessage(b.volunteerChat, formatted)
 
+	// Notify coordinator
 	if address != "" {
 		b.sendMessage(chatID, fmt.Sprintf("✅ Request #%d posted to volunteers with address.", req.ID))
 	} else {
