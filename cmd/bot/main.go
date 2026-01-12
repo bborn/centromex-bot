@@ -27,11 +27,12 @@ func main() {
 	defer database.Close()
 
 	// Initialize translator
-	log.Println("Loading LLM model (this may take a moment)...")
+	log.Println("Initializing translator...")
 	trans, err := translator.New(translator.Config{
 		ModelPath:   config.ModelPath,
 		ContextSize: 2048,
 		Threads:     4,
+		OpenAIKey:   config.OpenAIKey,
 	})
 	if err != nil {
 		log.Fatalf("Failed to initialize translator: %v", err)
@@ -82,6 +83,7 @@ type Config struct {
 	ModelPath      string
 	WebhookURL     string
 	WebhookSecret  string
+	OpenAIKey      string
 }
 
 func loadConfig() Config {
@@ -92,6 +94,7 @@ func loadConfig() Config {
 		ModelPath:     getEnvOrDefault("MODEL_PATH", "./models/llama-3.2-3b.Q4_K_M.gguf"),
 		WebhookURL:    os.Getenv("WEBHOOK_URL"),    // Optional - if set, uses webhook mode
 		WebhookSecret: os.Getenv("WEBHOOK_SECRET"), // Secret token for webhook verification
+		OpenAIKey:     os.Getenv("OPENAI_API_KEY"), // Optional - for translation
 	}
 
 	// Parse volunteer chat ID
