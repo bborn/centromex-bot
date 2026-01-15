@@ -14,14 +14,12 @@ class Centromex_Photo_Importer {
 
     private $replicate;
     private $openfoodfacts;
-    private $upcitemdb;
     private $image_processor;
     private $product_creator;
 
     public function __construct() {
         $this->replicate = new Centromex_Replicate_Client();
         $this->openfoodfacts = new Centromex_OpenFoodFacts_Client();
-        $this->upcitemdb = new Centromex_UPCitemdb_Client();
         $this->image_processor = new Centromex_Image_Processor();
         $this->product_creator = new Centromex_Product_Creator();
     }
@@ -167,7 +165,7 @@ class Centromex_Photo_Importer {
 
         error_log("Centromex: Identified - $brand / $product_name");
 
-        // Step 3: Validate with UPCitemdb first, then Open Food Facts
+        // Step 3: Validate with Open Food Facts
         $status = 'needs_review';
         $upc = '';
         $categories = isset($product_info['category']) ? [$product_info['category']] : [];
@@ -176,48 +174,21 @@ class Centromex_Photo_Importer {
         $final_brand = $brand;
         $price = isset($product_info['estimated_price_usd']) ? $product_info['estimated_price_usd'] : 0;
 
-        // Try UPCitemdb first (100 free requests/day)
-        error_log("Centromex: Checking UPCitemdb...");
-        $upc_data = $this->upcitemdb->search_product($brand, $product_name);
+        error_log("Centromex: Validating with Open Food Facts...");
+        $validation = $this->openfoodfacts->validate_product($brand, $product_name, $this->replicate);
 
-        if ($upc_data && isset($upc_data['found']) && $upc_data['found']) {
-            error_log("Centromex: VERIFIED via UPCitemdb");
+        if ($validation['found']) {
+            error_log("Centromex: VERIFIED via Open Food Facts");
             $status = 'verified';
-            $upc = isset($upc_data['upc']) ? $upc_data['upc'] : '';
-            $final_name = isset($upc_data['name']) ? $upc_data['name'] : $full_name;
-            $final_brand = isset($upc_data['brand']) ? $upc_data['brand'] : $brand;
+            $upc = isset($validation['off_code']) ? $validation['off_code'] : '';
+            $final_name = isset($validation['off_name']) ? $validation['off_name'] : $full_name;
+            $final_brand = isset($validation['off_brand']) ? $validation['off_brand'] : $brand;
 
-            if (isset($upc_data['category']) && !empty($upc_data['category'])) {
-                $categories = [$upc_data['category']];
+            if (isset($validation['off_categories']) && !empty($validation['off_categories'])) {
+                $categories = is_array($validation['off_categories']) ? $validation['off_categories'] : [$validation['off_categories']];
             }
-
-            if (isset($upc_data['description']) && !empty($upc_data['description'])) {
-                $description = $upc_data['description'];
-            }
-
-            if (isset($upc_data['price']) && $upc_data['price'] > 0) {
-                $price = $upc_data['price'];
-            }
-        }
-
-        // If UPCitemdb failed, try Open Food Facts
-        if ($status === 'needs_review') {
-            error_log("Centromex: UPCitemdb not found, trying Open Food Facts...");
-            $validation = $this->openfoodfacts->validate_product($brand, $product_name, $this->replicate);
-
-            if ($validation['found']) {
-                error_log("Centromex: VERIFIED via Open Food Facts");
-                $status = 'verified';
-                $upc = isset($validation['off_code']) ? $validation['off_code'] : '';
-                $final_name = isset($validation['off_name']) ? $validation['off_name'] : $full_name;
-                $final_brand = isset($validation['off_brand']) ? $validation['off_brand'] : $brand;
-
-                if (isset($validation['off_categories']) && !empty($validation['off_categories'])) {
-                    $categories = is_array($validation['off_categories']) ? $validation['off_categories'] : [$validation['off_categories']];
-                }
-            } else {
-                error_log("Centromex: NOT IN DATABASE - marking for review");
-            }
+        } else {
+            error_log("Centromex: NOT IN DATABASE - marking for review");
         }
 
         // Check for duplicate UPC

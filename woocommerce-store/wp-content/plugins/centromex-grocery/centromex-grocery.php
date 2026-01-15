@@ -26,7 +26,6 @@ define('CENTROMEX_GROCERY_URL', plugin_dir_url(__FILE__));
 // Include photo import classes
 require_once CENTROMEX_GROCERY_PATH . 'includes/class-replicate-client.php';
 require_once CENTROMEX_GROCERY_PATH . 'includes/class-openfoodfacts-client.php';
-require_once CENTROMEX_GROCERY_PATH . 'includes/class-upcitemdb-client.php';
 require_once CENTROMEX_GROCERY_PATH . 'includes/class-image-processor.php';
 require_once CENTROMEX_GROCERY_PATH . 'includes/class-product-creator.php';
 require_once CENTROMEX_GROCERY_PATH . 'includes/class-photo-importer.php';
