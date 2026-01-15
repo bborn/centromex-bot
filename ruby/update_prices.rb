@@ -5,10 +5,11 @@ require 'dotenv/load'
 require 'json'
 require 'net/http'
 require 'cgi'
+require 'openssl'
 
 # Configure Gemini
 RubyLLM.configure do |config|
-  config.gemini_api_key = ENV['GEMINI_API_KEY'] || "AIzaSyCa_Z1paIaWf1PDSR69fURRlxbMUBu-GHE"
+  config.gemini_api_key = ENV['GEMINI_API_KEY'] || "AIzaSyAlIwV9vTQB7UqfWk5duDgP9mXFH18NAwE"
   config.default_model = "gemini-2.5-flash"
 end
 
@@ -24,7 +25,7 @@ end
 
 # Search UPCitemdb API by product name
 def search_upcitemdb(brand, product_name)
-  api_key = ENV['UPCITEMDB_API_KEY']
+  api_key = ENV['UPCITEMDB_API_KEY'] || "fd1e6386029fde4d3c44fb45f5814a4c"
   base_url = api_key ? "https://api.upcitemdb.com/prod/v1/search" : "https://api.upcitemdb.com/prod/trial/search"
 
   query = CGI.escape("#{brand} #{product_name}".strip)
@@ -33,13 +34,14 @@ def search_upcitemdb(brand, product_name)
   uri = URI(url)
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+  http.ssl_version = :TLSv1_2
   http.open_timeout = 10
   http.read_timeout = 10
 
   request = Net::HTTP::Get.new(uri.request_uri)
   request['Content-Type'] = 'application/json'
   request['Accept'] = 'application/json'
-  request['Accept-Encoding'] = 'gzip,deflate'
 
   if api_key
     request['user_key'] = api_key
@@ -122,7 +124,7 @@ puts "Reading #{INPUT_CSV}..."
 rows = CSV.read(INPUT_CSV, headers: true)
 puts "Found #{rows.length} products"
 
-api_mode = ENV['UPCITEMDB_API_KEY'] ? "paid (unlimited)" : "trial (100/day)"
+api_mode = "paid (2000/day)"
 puts "UPCitemdb API: #{api_mode}"
 puts ""
 

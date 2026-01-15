@@ -34,7 +34,9 @@ Step 3: The cropped segments look rough, so we run them through Google's nano-ba
 **Tweet 6:**
 Step 4: Claude Code orchestrates the whole pipeline - calling Gemini to identify each product, generating WooCommerce-ready CSVs with names, descriptions, categories, and prices.
 
-[attach: code-image-format-change.png]
+I used my own TUI task/AI management tool (https://github.com/bborn/taskyou) to run multiple AI agents in parallel - Claude building the store, processing images, updating prices - all happening simultaneously.
+
+[attach: CleanShot 2026-01-15 at 09.47.33@2x.png]
 
 **Tweet 7:**
 But generic names like "fruit-smoothie-drink" aren't useful. And we were getting duplicates.
@@ -54,7 +56,10 @@ Now we validate every detection against the database. Only real products make it
 [attach: open-food-facts-strategy.png]
 
 **Tweet 9:**
-Total cost for all the ML: $0.28
+Total costs:
+- Replicate (image processing): ~$9
+- UPC API: $90/month (moving to free tier after)
+- Sprites hosting: ~$4/month
 
 Total time: one morning
 

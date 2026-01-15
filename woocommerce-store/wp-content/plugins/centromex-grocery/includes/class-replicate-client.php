@@ -148,7 +148,7 @@ Return ONLY valid JSON with these exact fields:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('meta/llama-3.2-11b-vision-instruct', [
+        $prediction = $this->create_prediction('google-deepmind/gemini-2.0-flash-exp:a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
             'prompt' => $prompt,
             'image' => $base64_image,
             'max_tokens' => 500,
@@ -225,7 +225,7 @@ Return ONLY valid JSON:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('meta/llama-3.2-3b-instruct', [
+        $prediction = $this->create_prediction('google-deepmind/gemini-2.0-flash-exp:a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
             'prompt' => $prompt,
             'max_tokens' => 200,
             'temperature' => 0.1
@@ -323,7 +323,7 @@ PROMPT;
         $url = $this->api_base . '/predictions';
 
         $body = json_encode([
-            'version' => $this->get_model_version($model_version),
+            'version' => $model_version,
             'input' => $input
         ]);
 

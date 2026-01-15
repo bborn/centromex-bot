@@ -16,7 +16,7 @@ require 'concurrent'
 
 # --- Configuration ---
 RubyLLM.configure do |config|
-  config.gemini_api_key = ENV['GEMINI_API_KEY'] || "AIzaSyCa_Z1paIaWf1PDSR69fURRlxbMUBu-GHE"
+  config.gemini_api_key = ENV['GEMINI_API_KEY'] || "AIzaSyAlIwV9vTQB7UqfWk5duDgP9mXFH18NAwE"
   config.default_model = "gemini-2.5-flash"
 end
 
@@ -46,7 +46,7 @@ end
 def search_upcitemdb(brand, product_name)
   # Use trial endpoint (100 requests/day free, no key needed)
   # Or paid endpoint with key: https://api.upcitemdb.com/prod/v1/search
-  api_key = ENV['UPCITEMDB_API_KEY']
+  api_key = ENV['UPCITEMDB_API_KEY'] || "fd1e6386029fde4d3c44fb45f5814a4c"
 
   base_url = api_key ? "https://api.upcitemdb.com/prod/v1/search" : "https://api.upcitemdb.com/prod/trial/search"
   query = CGI.escape("#{brand} #{product_name}".strip)
@@ -55,6 +55,7 @@ def search_upcitemdb(brand, product_name)
   uri = URI(url)
   http = Net::HTTP.new(uri.host, uri.port)
   http.use_ssl = true
+  http.verify_mode = OpenSSL::SSL::VERIFY_NONE  # Skip SSL verification
   http.open_timeout = 10
   http.read_timeout = 10
 
