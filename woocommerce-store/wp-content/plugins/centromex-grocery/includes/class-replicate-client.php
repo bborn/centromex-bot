@@ -148,7 +148,7 @@ Return ONLY valid JSON with these exact fields:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('meta/meta-llama-3.1-405b-instruct', [
+        $prediction = $this->create_prediction('meta/llama-3.2-11b-vision-instruct', [
             'prompt' => $prompt,
             'image' => $base64_image,
             'max_tokens' => 500,
@@ -225,7 +225,7 @@ Return ONLY valid JSON:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('meta/meta-llama-3.1-405b-instruct', [
+        $prediction = $this->create_prediction('meta/llama-3.2-3b-instruct', [
             'prompt' => $prompt,
             'max_tokens' => 200,
             'temperature' => 0.1
@@ -396,7 +396,8 @@ PROMPT;
         // For now, use latest version string format
         $versions = [
             'adirik/grounding-dino' => 'latest',
-            'meta/meta-llama-3.1-405b-instruct' => 'latest',
+            'meta/llama-3.2-11b-vision-instruct' => 'latest',
+            'meta/llama-3.2-3b-instruct' => 'latest',
             'google/nano-banana-pro' => 'latest'
         ];
 
