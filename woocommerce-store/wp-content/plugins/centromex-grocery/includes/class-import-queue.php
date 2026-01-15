@@ -20,7 +20,7 @@ class Centromex_Import_Queue {
      * Initialize hooks
      */
     public static function init() {
-        add_action(self::HOOK_PROCESS_IMAGE, [__CLASS__, 'handle_process_image'], 10, 1);
+        add_action(self::HOOK_PROCESS_IMAGE, [__CLASS__, 'handle_process_image'], 10, 3);
         add_action(self::HOOK_COMPLETE_BATCH, [__CLASS__, 'handle_complete_batch'], 10, 1);
     }
 
@@ -71,20 +71,14 @@ class Centromex_Import_Queue {
     /**
      * Handle image processing job
      *
-     * @param array $args Job arguments (passed as first element by Action Scheduler)
+     * @param string $image_path Image path
+     * @param string $image_hash Image hash
+     * @param string $batch_id Batch ID
      */
-    public static function handle_process_image($args) {
+    public static function handle_process_image($image_path, $image_hash, $batch_id) {
         try {
-            // Action Scheduler wraps args in an array, get first element
-            if (is_array($args) && isset($args[0]) && is_array($args[0])) {
-                $args = $args[0];
-            }
-
-            $image_path = isset($args['image_path']) ? $args['image_path'] : '';
-            $image_hash = isset($args['image_hash']) ? $args['image_hash'] : '';
-            $batch_id = isset($args['batch_id']) ? $args['batch_id'] : '';
-
             if (empty($image_path) || empty($image_hash) || empty($batch_id)) {
+                error_log('Centromex: Missing required arguments - path: ' . var_export($image_path, true) . ', hash: ' . var_export($image_hash, true) . ', batch: ' . var_export($batch_id, true));
                 throw new Exception('Missing required arguments');
             }
 
@@ -108,18 +102,11 @@ class Centromex_Import_Queue {
     /**
      * Handle batch completion
      *
-     * @param array $args Job arguments (passed as first element by Action Scheduler)
+     * @param string $batch_id Batch ID
      */
-    public static function handle_complete_batch($args) {
-        // Action Scheduler wraps args in an array, get first element
-        if (is_array($args) && isset($args[0]) && is_array($args[0])) {
-            $args = $args[0];
-        }
-
-        $batch_id = isset($args['batch_id']) ? $args['batch_id'] : '';
-
+    public static function handle_complete_batch($batch_id) {
         if (empty($batch_id)) {
-            error_log('Centromex: Missing batch_id in completion handler');
+            error_log('Centromex: Missing batch_id in completion handler - received: ' . var_export($batch_id, true));
             return;
         }
 
