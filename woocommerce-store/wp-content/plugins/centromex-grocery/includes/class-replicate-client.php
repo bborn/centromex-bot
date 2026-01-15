@@ -76,7 +76,7 @@ class Centromex_Replicate_Client {
      * @return array Detections
      */
     private function run_dino_query($base64_image, $query, $box_thresh = 0.15, $text_thresh = 0.15) {
-        $prediction = $this->create_prediction('adirik/grounding-dino', [
+        $prediction = $this->create_prediction('efd10a8ddc57ea28773327e881ce95e20cc1d734c589f7dd01d2036921ed78aa', [
             'image' => $base64_image,
             'query' => $query,
             'box_threshold' => $box_thresh,
@@ -148,10 +148,10 @@ Return ONLY valid JSON with these exact fields:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
+        $prediction = $this->create_prediction('bfb7df9586ae4fafa00a593d8dc4868698f72cf9d695da28b8c8a70f88e876ba', [
             'prompt' => $prompt,
-            'image' => $base64_image,
-            'max_tokens' => 500,
+            'images' => [$base64_image],
+            'max_output_tokens' => 500,
             'temperature' => 0.1
         ]);
 
@@ -225,9 +225,9 @@ Return ONLY valid JSON:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
+        $prediction = $this->create_prediction('bfb7df9586ae4fafa00a593d8dc4868698f72cf9d695da28b8c8a70f88e876ba', [
             'prompt' => $prompt,
-            'max_tokens' => 200,
+            'max_output_tokens' => 200,
             'temperature' => 0.1
         ]);
 
