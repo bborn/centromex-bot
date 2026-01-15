@@ -1,0 +1,332 @@
+/**
+ * Centromex Grocery - Mobile-First Styles
+ * Designed for easy use on mobile devices
+ */
+
+/* Base mobile-first styles */
+:root {
+    --centromex-primary: #2c5f2d;
+    --centromex-secondary: #97bc62;
+    --centromex-accent: #dae6d1;
+    --centromex-text: #333333;
+    --centromex-light: #f5f5f5;
+    --centromex-white: #ffffff;
+    --centromex-border: #e0e0e0;
+}
+
+/* Typography for readability */
+body {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--centromex-text);
+}
+
+/* Welcome message styling */
+.centromex-welcome {
+    background: linear-gradient(135deg, var(--centromex-primary), var(--centromex-secondary));
+    color: var(--centromex-white);
+    padding: 2rem 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.centromex-welcome h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--centromex-white);
+}
+
+.centromex-welcome p {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.95;
+}
+
+.centromex-description,
+.centromex-description-en {
+    font-size: 1rem !important;
+    opacity: 0.9;
+}
+
+/* Product cards - large touch targets */
+.woocommerce ul.products li.product {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: var(--centromex-white);
+}
+
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+    font-size: 1.1rem;
+    padding: 0.75rem 0;
+    color: var(--centromex-text);
+}
+
+.woocommerce ul.products li.product .price {
+    font-size: 1.25rem;
+    color: var(--centromex-primary);
+    font-weight: bold;
+}
+
+/* Large, touch-friendly buttons */
+.woocommerce a.button,
+.woocommerce button.button,
+.woocommerce input.button,
+.woocommerce #respond input#submit {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 8px;
+    background: var(--centromex-primary);
+    color: var(--centromex-white);
+    border: none;
+    width: 100%;
+    max-width: 100%;
+    margin: 0.5rem 0;
+    touch-action: manipulation;
+}
+
+.woocommerce a.button:hover,
+.woocommerce button.button:hover {
+    background: var(--centromex-secondary);
+    color: var(--centromex-white);
+}
+
+/* Add to cart button */
+.woocommerce ul.products li.product .button {
+    margin-top: 1rem;
+}
+
+/* Quantity input - larger for mobile */
+.woocommerce .quantity .qty {
+    width: 80px;
+    height: 48px;
+    font-size: 1.2rem;
+    text-align: center;
+    border-radius: 8px;
+    border: 2px solid var(--centromex-border);
+}
+
+/* Cart page mobile optimization */
+.woocommerce-cart table.cart {
+    font-size: 0.95rem;
+}
+
+.woocommerce-cart table.cart td {
+    padding: 1rem 0.5rem;
+}
+
+.woocommerce-cart table.cart img {
+    max-width: 60px;
+}
+
+/* Checkout form styling */
+.woocommerce-checkout .form-row {
+    margin-bottom: 1.5rem;
+}
+
+.woocommerce-checkout .form-row label {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+    color: var(--centromex-text);
+}
+
+.woocommerce-checkout .form-row input,
+.woocommerce-checkout .form-row select,
+.woocommerce-checkout .form-row textarea {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    border: 2px solid var(--centromex-border);
+    border-radius: 8px;
+    background: var(--centromex-white);
+}
+
+.woocommerce-checkout .form-row input:focus,
+.woocommerce-checkout .form-row select:focus,
+.woocommerce-checkout .form-row textarea:focus {
+    border-color: var(--centromex-primary);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
+}
+
+/* Delivery fields section */
+#centromex_delivery_fields {
+    background: var(--centromex-accent);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    border-left: 4px solid var(--centromex-primary);
+}
+
+#centromex_delivery_fields h3 {
+    color: var(--centromex-primary);
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+/* Order summary */
+.woocommerce-checkout-review-order-table {
+    font-size: 1rem;
+}
+
+.woocommerce-checkout-review-order-table .order-total {
+    font-size: 1.3rem;
+    color: var(--centromex-primary);
+}
+
+/* Payment methods */
+.woocommerce-checkout #payment {
+    background: var(--centromex-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.woocommerce-checkout #payment ul.payment_methods {
+    padding: 0;
+    margin: 0;
+}
+
+.woocommerce-checkout #payment ul.payment_methods li {
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: var(--centromex-white);
+    border-radius: 8px;
+}
+
+/* Place order button */
+.woocommerce #place_order {
+    font-size: 1.2rem;
+    padding: 1rem 2rem;
+    min-height: 56px;
+    background: var(--centromex-primary);
+    margin-top: 1rem;
+}
+
+/* Messages and notices */
+.woocommerce-message,
+.woocommerce-info,
+.woocommerce-error {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.woocommerce-message::before,
+.woocommerce-info::before,
+.woocommerce-error::before {
+    font-size: 1.5rem;
+}
+
+/* Cart mini widget */
+.woocommerce .widget_shopping_cart .cart_list li {
+    padding: 0.75rem 0;
+}
+
+/* Category navigation */
+.woocommerce .widget_product_categories ul li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--centromex-border);
+}
+
+.woocommerce .widget_product_categories ul li a {
+    font-size: 1rem;
+    color: var(--centromex-text);
+}
+
+/* Search box */
+.woocommerce-product-search input[type="search"] {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 2px solid var(--centromex-border);
+}
+
+/* Admin delivery info styling */
+.centromex-delivery-info {
+    background: #f0f6f0;
+    padding: 15px;
+    margin-top: 15px;
+    border-left: 4px solid var(--centromex-primary);
+    border-radius: 4px;
+}
+
+.centromex-delivery-info h3 {
+    margin-top: 0;
+    color: var(--centromex-primary);
+}
+
+/* Responsive breakpoints */
+@media screen and (min-width: 768px) {
+    .centromex-welcome {
+        padding: 3rem 2rem;
+    }
+
+    .centromex-welcome h2 {
+        font-size: 2rem;
+    }
+
+    .woocommerce ul.products li.product {
+        padding: 1.5rem;
+    }
+
+    .woocommerce a.button,
+    .woocommerce button.button {
+        width: auto;
+        min-width: 200px;
+    }
+}
+
+@media screen and (min-width: 1024px) {
+    .woocommerce-checkout .col2-set {
+        display: flex;
+        gap: 2rem;
+    }
+
+    .woocommerce-checkout .col2-set .col-1,
+    .woocommerce-checkout .col2-set .col-2 {
+        flex: 1;
+    }
+}
+
+/* Accessibility improvements */
+.woocommerce a.button:focus,
+.woocommerce button.button:focus,
+.woocommerce input.button:focus {
+    outline: 3px solid var(--centromex-secondary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .woocommerce a.button,
+    .woocommerce button.button {
+        border: 2px solid currentColor;
+    }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .centromex-welcome,
+    .woocommerce a.button,
+    .woocommerce button.button {
+        background: #333 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

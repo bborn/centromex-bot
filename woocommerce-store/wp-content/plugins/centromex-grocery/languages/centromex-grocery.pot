@@ -1,0 +1,108 @@
+# Centromex Grocery Translation Template
+# Copyright (C) 2024 Centromex
+# This file is distributed under the GPL v2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Centromex Grocery 1.0.0\n"
+"Report-Msgid-Bugs-To: https://centromex.org\n"
+"POT-Creation-Date: 2024-01-01 00:00+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: centromex-grocery.php
+msgid "Instrucciones de Entrega / Delivery Instructions"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Instrucciones especiales para la entrega / Special delivery instructions"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Ejemplo: Tocar el timbre 2 veces / Example: Ring doorbell 2 times"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Horario preferido de entrega / Preferred delivery time"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Seleccione... / Select..."
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Mañana (9am-12pm) / Morning (9am-12pm)"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Tarde (12pm-5pm) / Afternoon (12pm-5pm)"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Noche (5pm-8pm) / Evening (5pm-8pm)"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Teléfono de contacto / Contact phone"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Para coordinar la entrega / For delivery coordination"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Por favor ingrese un teléfono de contacto. / Please enter a contact phone number."
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Nuevo Pedido / New Order #%s"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Nombre / First Name"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Apellido / Last Name"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Dirección / Address"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Ciudad / City"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Código Postal / Zip Code"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Teléfono / Phone"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Correo Electrónico / Email"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Bienvenidos a la Tienda de Abarrotes Centromex"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Welcome to the Centromex Grocery Store"
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Ordene sus compras en línea y nosotros se las llevaremos a su hogar."
+msgstr ""
+
+#: centromex-grocery.php
+msgid "Order your groceries online and we will deliver them to your home."
+msgstr ""

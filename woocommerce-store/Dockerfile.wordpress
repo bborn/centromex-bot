@@ -1,0 +1,34 @@
+FROM wordpress:latest
+
+# Install additional PHP extensions for WooCommerce
+RUN apt-get update && apt-get install -y \
+    libzip-dev \
+    libicu-dev \
+    unzip \
+    && docker-php-ext-install zip intl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install WP-CLI
+RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    && chmod +x wp-cli.phar \
+    && mv wp-cli.phar /usr/local/bin/wp
+
+# Create directory for WP-CLI
+RUN mkdir -p /var/www/.wp-cli && chown www-data:www-data /var/www/.wp-cli
+
+# Copy initialization script
+COPY scripts/init-wordpress.sh /usr/local/bin/init-wordpress.sh
+RUN chmod +x /usr/local/bin/init-wordpress.sh
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Expose port 80
+EXPOSE 80
+
+# Use custom entrypoint that runs initialization
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint-custom.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint-custom.sh
+
+ENTRYPOINT ["docker-entrypoint-custom.sh"]
+CMD ["apache2-foreground"]
