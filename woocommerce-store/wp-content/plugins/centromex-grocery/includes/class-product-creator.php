@@ -168,7 +168,7 @@ class Centromex_Product_Creator {
     /**
      * Get or create product categories
      *
-     * @param string $categories_str Comma-separated categories
+     * @param string|array $categories_str Comma-separated categories or array of category names
      * @return array Category IDs
      */
     private function get_or_create_categories($categories_str) {
@@ -176,7 +176,13 @@ class Centromex_Product_Creator {
             return [];
         }
 
-        $category_names = array_map('trim', explode(',', $categories_str));
+        // Handle both string and array input
+        if (is_array($categories_str)) {
+            $category_names = array_map('trim', $categories_str);
+        } else {
+            $category_names = array_map('trim', explode(',', $categories_str));
+        }
+
         $category_ids = [];
 
         foreach ($category_names as $name) {
