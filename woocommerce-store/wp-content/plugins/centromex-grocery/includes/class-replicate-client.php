@@ -14,6 +14,8 @@ class Centromex_Replicate_Client {
 
     private $api_token;
     private $api_base = 'https://api.replicate.com/v1';
+    private $gemini_api_key;
+    private $gemini_api_base = 'https://generativelanguage.googleapis.com/v1beta';
 
     public function __construct() {
         $this->api_token = defined('CENTROMEX_REPLICATE_API_TOKEN')
@@ -23,6 +25,79 @@ class Centromex_Replicate_Client {
         if (empty($this->api_token)) {
             error_log('Centromex: REPLICATE_API_TOKEN not configured');
         }
+
+        $this->gemini_api_key = defined('CENTROMEX_GEMINI_API_KEY')
+            ? CENTROMEX_GEMINI_API_KEY
+            : getenv('GEMINI_API_KEY');
+
+        if (empty($this->gemini_api_key)) {
+            error_log('Centromex: GEMINI_API_KEY not configured');
+        }
+    }
+
+    /**
+     * Call Gemini API with structured JSON schema output
+     *
+     * @param string $prompt Text prompt
+     * @param string $base64_image Base64 encoded image (optional)
+     * @param array $schema JSON schema for response
+     * @return array Parsed JSON response
+     */
+    private function call_gemini_with_schema($prompt, $base64_image = null, $schema = []) {
+        $url = $this->gemini_api_base . '/models/gemini-2.5-flash:generateContent?key=' . $this->gemini_api_key;
+
+        $contents = [];
+        if ($base64_image) {
+            $contents[] = [
+                'parts' => [
+                    ['text' => $prompt],
+                    [
+                        'inline_data' => [
+                            'mime_type' => 'image/jpeg',
+                            'data' => $base64_image
+                        ]
+                    ]
+                ]
+            ];
+        } else {
+            $contents[] = [
+                'parts' => [['text' => $prompt]]
+            ];
+        }
+
+        $body = [
+            'contents' => $contents,
+            'generationConfig' => [
+                'responseMimeType' => 'application/json',
+                'responseSchema' => $schema
+            ]
+        ];
+
+        $response = wp_remote_post($url, [
+            'headers' => [
+                'Content-Type' => 'application/json'
+            ],
+            'body' => json_encode($body),
+            'timeout' => 30
+        ]);
+
+        if (is_wp_error($response)) {
+            throw new Exception('Gemini API error: ' . $response->get_error_message());
+        }
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+
+        if (wp_remote_retrieve_response_code($response) !== 200) {
+            throw new Exception('Gemini API error: ' . print_r($data, true));
+        }
+
+        // Extract JSON from Gemini response
+        if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+            $json_str = $data['candidates'][0]['content']['parts'][0]['text'];
+            return json_decode($json_str, true);
+        }
+
+        throw new Exception('Unexpected Gemini response format');
     }
 
     /**
@@ -95,7 +170,7 @@ class Centromex_Replicate_Client {
     }
 
     /**
-     * Identify product using LLM with JSON mode
+     * Identify product using Gemini with JSON schema
      *
      * @param string $image_path Path to cropped product image
      * @return array Product identification data
@@ -111,115 +186,93 @@ class Centromex_Replicate_Client {
 Look at this product image carefully. Your job is to READ THE LABEL and extract product information.
 
 CRITICAL: You must identify:
-1. BRAND NAME - exactly as shown on the packaging
-2. PRODUCT NAME - the specific product
-3. SIZE - weight or volume if visible (e.g., "16 oz", "450ml")
-4. ESTIMATED PRICE - estimate a reasonable US retail price
-5. CATEGORY - assign one category from the list below
-
-CATEGORIES (choose ONE that best fits):
-- Snacks & Chips
-- Beverages
-- Dairy & Eggs
-- Meat & Seafood
-- Bakery & Bread
-- Pantry & Canned Goods
-- Condiments & Sauces
-- Frozen Foods
-- Fresh Produce
-- Breakfast & Cereal
-- International Foods
-- Candy & Sweets
-- Health & Personal Care
-
-Examples:
-- Brand: "Goya", Product: "Mango Nectar", Size: "9.6 oz", Category: "Beverages", Price: 1.49
-- Brand: "El Mexicano", Product: "Crema Mexicana", Size: "15 oz", Category: "Dairy & Eggs", Price: 4.99
-- Brand: "Cheetos", Product: "Puffs", Size: "8 oz", Category: "Snacks & Chips", Price: 3.99
+1. BRAND NAME - exactly as shown on the packaging (e.g., 'Goya', 'La Costeña', 'Alpina', 'El Mexicano')
+2. PRODUCT NAME - the specific product (e.g., 'Mango Nectar', 'Crema Mexicana', 'Avena Original')
+3. SIZE - weight or volume if visible (e.g., "16 oz", "450ml", "1 lb", "500g")
+4. CATEGORY - assign ONE category that best fits
+5. ESTIMATED PRICE - estimate a reasonable US retail price
 
 PRICING GUIDELINES (USD):
-- Small juice/nectar bottles (8-12 oz): $1.00 - $2.00
-- Large juice bottles (32+ oz): $3.00 - $5.00
-- Yogurt drinks (individual): $1.50 - $3.00
-- Cream/Crema (small): $3.00 - $5.00
-- Cream/Crema (large): $5.00 - $8.00
-- Cheese: $4.00 - $8.00
-- Meat/Chorizo: $5.00 - $10.00
-- Snacks (8-12 oz): $3.00 - $5.00
-
-For fresh produce: Brand="Fresh", product_type="produce", category="Fresh Produce"
+- Small juice/nectar bottles (8-12 oz): \$1.00 - \$2.00
+- Large juice bottles (32+ oz): \$3.00 - \$5.00
+- Yogurt drinks (individual): \$1.50 - \$3.00
+- Cream/Crema (small): \$3.00 - \$5.00
+- Cream/Crema (large): \$5.00 - \$8.00
+- Cheese: \$4.00 - \$8.00
+- Meat/Chorizo: \$5.00 - \$10.00
+- Snacks (8-12 oz): \$3.00 - \$5.00
 
 RULES:
 - If you cannot clearly read a brand name, set is_product=false
 - Estimate price based on product type, size, and brand positioning
-- Always assign a category from the list above
-
-Return ONLY the JSON object, no markdown formatting:
-{
-  "brand": "brand name",
-  "product_name": "product name",
-  "full_name": "brand + product name",
-  "is_product": true or false,
-  "product_type": "packaged" | "produce" | "meat" | "bakery",
-  "category": "category from list above",
-  "size": "size string",
-  "estimated_price_usd": 0.00
-}
+- For fresh produce: use Brand="Fresh", product_type="produce", category="Fresh Produce"
 PROMPT;
 
-        $prediction = $this->create_prediction('bfb7df9586ae4fafa00a593d8dc4868698f72cf9d695da28b8c8a70f88e876ba', [
-            'prompt' => $prompt,
-            'images' => [$base64_image],
-            'max_output_tokens' => 500,
-            'temperature' => 0.1
-        ]);
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'brand' => [
+                    'type' => 'string',
+                    'description' => 'The brand name exactly as shown on the packaging'
+                ],
+                'product_name' => [
+                    'type' => 'string',
+                    'description' => 'The specific product name'
+                ],
+                'full_name' => [
+                    'type' => 'string',
+                    'description' => 'Brand + product name combined'
+                ],
+                'is_product' => [
+                    'type' => 'boolean',
+                    'description' => 'True if you can clearly read a brand and product name. False if unclear, partial, or not a product.'
+                ],
+                'product_type' => [
+                    'type' => 'string',
+                    'enum' => ['packaged', 'produce', 'meat', 'bakery'],
+                    'description' => 'Type of product'
+                ],
+                'category' => [
+                    'type' => 'string',
+                    'enum' => [
+                        'Snacks & Chips',
+                        'Beverages',
+                        'Dairy & Eggs',
+                        'Meat & Seafood',
+                        'Bakery & Bread',
+                        'Pantry & Canned Goods',
+                        'Condiments & Sauces',
+                        'Frozen Foods',
+                        'Fresh Produce',
+                        'Breakfast & Cereal',
+                        'International Foods',
+                        'Candy & Sweets',
+                        'Health & Personal Care'
+                    ],
+                    'description' => 'Product category - choose the one that best fits'
+                ],
+                'size' => [
+                    'type' => 'string',
+                    'description' => 'Product size/weight if visible on label'
+                ],
+                'estimated_price_usd' => [
+                    'type' => 'number',
+                    'description' => 'Estimated US retail price'
+                ]
+            ],
+            'required' => ['brand', 'product_name', 'full_name', 'is_product', 'product_type', 'category', 'size', 'estimated_price_usd']
+        ];
 
-        $prediction = $this->wait_for_prediction($prediction['id']);
-
-        if ($prediction['status'] !== 'succeeded') {
-            error_log("Centromex: LLM identification failed");
+        try {
+            return $this->call_gemini_with_schema($prompt, $base64_image, $schema);
+        } catch (Exception $e) {
+            error_log("Centromex: Gemini identification error: " . $e->getMessage());
             return ['is_product' => false];
         }
-
-        // Parse JSON from output - Gemini returns array of text parts
-        if (is_array($prediction['output'])) {
-            // Join all text parts
-            $output = '';
-            foreach ($prediction['output'] as $part) {
-                if (is_string($part)) {
-                    $output .= $part;
-                } elseif (isset($part['text'])) {
-                    $output .= $part['text'];
-                }
-            }
-        } else {
-            $output = $prediction['output'];
-        }
-
-        // Clean up output - remove markdown code blocks
-        $output = trim($output);
-        $output = preg_replace('/^```(?:json)?\s*/s', '', $output);
-        $output = preg_replace('/\s*```$/s', '', $output);
-
-        // Extract JSON object
-        if (preg_match('/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s', $output, $matches)) {
-            $json_str = $matches[1];
-        } else {
-            $json_str = $output;
-        }
-
-        $data = json_decode($json_str, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Centromex: Failed to parse LLM JSON response: " . substr($output, 0, 500));
-            return ['is_product' => false];
-        }
-
-        return $data;
     }
 
     /**
-     * Validate if detected product matches Open Food Facts result using LLM
+     * Validate if detected product matches Open Food Facts result using Gemini with schema
      *
      * @param string $detected_brand
      * @param string $detected_name
@@ -251,61 +304,29 @@ Examples:
 - "El Mexicano" + "Crema" vs "El Mexicano" + "Sour Cream" = MATCH (same brand, same product type)
 - "Del Prado" + "Crema" vs "Verduras Curro" + "Remolacha" = NOT MATCH (different brands, different products)
 - "Saborico" + "Yogurt" vs "gullón" + "Sandwich" = NOT MATCH (different brands, different products)
-
-Return ONLY valid JSON:
-{
-  "is_match": true or false,
-  "reason": "brief explanation"
-}
 PROMPT;
 
-        $prediction = $this->create_prediction('bfb7df9586ae4fafa00a593d8dc4868698f72cf9d695da28b8c8a70f88e876ba', [
-            'prompt' => $prompt,
-            'max_output_tokens' => 200,
-            'temperature' => 0.1
-        ]);
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'is_match' => [
+                    'type' => 'boolean',
+                    'description' => 'True if the products match, false otherwise'
+                ],
+                'reason' => [
+                    'type' => 'string',
+                    'description' => 'Brief explanation of why they match or do not match'
+                ]
+            ],
+            'required' => ['is_match', 'reason']
+        ];
 
-        $prediction = $this->wait_for_prediction($prediction['id']);
-
-        if ($prediction['status'] !== 'succeeded') {
-            error_log("Centromex: LLM validation failed");
-            return ['is_match' => false, 'reason' => 'LLM error'];
+        try {
+            return $this->call_gemini_with_schema($prompt, null, $schema);
+        } catch (Exception $e) {
+            error_log("Centromex: Gemini validation error: " . $e->getMessage());
+            return ['is_match' => false, 'reason' => 'API error'];
         }
-
-        // Parse JSON from output - Gemini returns array of text parts
-        if (is_array($prediction['output'])) {
-            $output = '';
-            foreach ($prediction['output'] as $part) {
-                if (is_string($part)) {
-                    $output .= $part;
-                } elseif (isset($part['text'])) {
-                    $output .= $part['text'];
-                }
-            }
-        } else {
-            $output = $prediction['output'];
-        }
-
-        // Clean up output - remove markdown code blocks
-        $output = trim($output);
-        $output = preg_replace('/^```(?:json)?\s*/s', '', $output);
-        $output = preg_replace('/\s*```$/s', '', $output);
-
-        // Extract JSON object
-        if (preg_match('/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s', $output, $matches)) {
-            $json_str = $matches[1];
-        } else {
-            $json_str = $output;
-        }
-
-        $data = json_decode($json_str, true);
-
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Centromex: Failed to parse validation JSON: " . substr($output, 0, 500));
-            return ['is_match' => false, 'reason' => 'Parse error'];
-        }
-
-        return $data;
     }
 
     /**
