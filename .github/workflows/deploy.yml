@@ -41,20 +41,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
 
-          # Create tarball of plugin
-          cd woocommerce-store/wp-content/plugins
-          tar -czf /tmp/centromex-grocery.tar.gz centromex-grocery/
-
-          # Remove old plugin directory on sprite
-          sprite -s centromex-grocery exec rm -rf /home/sprite/wordpress/wp-content/plugins/centromex-grocery || true
-
-          # Upload and extract plugin
-          cat /tmp/centromex-grocery.tar.gz | sprite -s centromex-grocery exec sh -c 'cd /home/sprite/wordpress/wp-content/plugins && tar -xzf -'
-
-          # Configure Replicate API token in wp-config.php
-          sprite -s centromex-grocery exec sh -c "grep -q 'CENTROMEX_REPLICATE_API_TOKEN' /home/sprite/wordpress/wp-config.php || sed -i \"/\\/\\* That's all, stop editing\\!/i define('CENTROMEX_REPLICATE_API_TOKEN', getenv('REPLICATE_API_TOKEN'));\" /home/sprite/wordpress/wp-config.php"
-
-          # Set environment variable for WordPress
-          sprite -s centromex-grocery exec sh -c "echo 'export REPLICATE_API_TOKEN=\"${{ secrets.REPLICATE_API_TOKEN }}\"' >> /home/sprite/.bashrc"
+          # Clone repo to temp, copy plugin, clean up
+          sprite -s centromex-grocery exec sh -c 'mkdir -p /tmp/deploy && cd /tmp/deploy && git clone --depth 1 https://github.com/bborn/centromex-bot.git && rm -rf /home/sprite/wordpress/wp-content/plugins/centromex-grocery && cp -r centromex-bot/woocommerce-store/wp-content/plugins/centromex-grocery /home/sprite/wordpress/wp-content/plugins/ && rm -rf /tmp/deploy'
 
           echo "WordPress plugin deployed successfully!"
