@@ -23,6 +23,39 @@ define('CENTROMEX_GROCERY_VERSION', '1.0.0');
 define('CENTROMEX_GROCERY_PATH', plugin_dir_path(__FILE__));
 define('CENTROMEX_GROCERY_URL', plugin_dir_url(__FILE__));
 
+// Include photo import classes
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-replicate-client.php';
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-openfoodfacts-client.php';
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-image-processor.php';
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-product-creator.php';
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-photo-importer.php';
+require_once CENTROMEX_GROCERY_PATH . 'includes/class-import-queue.php';
+
+// Activation hook
+register_activation_hook(__FILE__, 'centromex_grocery_activate');
+
+function centromex_grocery_activate() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'centromex_processed_images';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_name (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        image_hash VARCHAR(64) NOT NULL,
+        original_filename VARCHAR(255) NOT NULL,
+        products_detected INT DEFAULT 0,
+        products_created INT DEFAULT 0,
+        processed_at DATETIME NOT NULL,
+        batch_id VARCHAR(50),
+        PRIMARY KEY  (id),
+        UNIQUE KEY image_hash (image_hash),
+        KEY batch_id (batch_id)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+}
+
 /**
  * Main Centromex Grocery Class
  */
@@ -70,6 +103,13 @@ class Centromex_Grocery {
 
         // Add Stripe configuration notice
         add_action('admin_notices', array($this, 'stripe_config_notice'));
+
+        // Enqueue admin scripts for photo import
+        add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
+
+        // AJAX handlers for photo import
+        add_action('wp_ajax_centromex_upload_photos', array($this, 'ajax_upload_photos'));
+        add_action('wp_ajax_centromex_get_progress', array($this, 'ajax_get_progress'));
     }
 
     /**
@@ -249,6 +289,16 @@ class Centromex_Grocery {
             'dashicons-cart',
             56
         );
+
+        // Add submenu for photo import
+        add_submenu_page(
+            'centromex-orders',
+            __('Import from Photos', 'centromex-grocery'),
+            __('Import from Photos', 'centromex-grocery'),
+            'manage_woocommerce',
+            'centromex-photo-import',
+            array($this, 'render_photo_import_page')
+        );
     }
 
     /**
@@ -274,6 +324,149 @@ class Centromex_Grocery {
             echo __('Please configure your Stripe API keys to accept payments. Go to WooCommerce > Settings > Payments > Stripe.', 'centromex-grocery');
             echo '</p></div>';
         }
+    }
+
+    /**
+     * Render photo import page
+     */
+    public function render_photo_import_page() {
+        include CENTROMEX_GROCERY_PATH . 'templates/admin-photo-import.php';
+    }
+
+    /**
+     * Enqueue admin scripts and styles
+     */
+    public function enqueue_admin_scripts($hook) {
+        // Only load on our photo import page
+        if ($hook !== 'centromex-orders_page_centromex-photo-import') {
+            return;
+        }
+
+        wp_enqueue_style(
+            'centromex-photo-import',
+            CENTROMEX_GROCERY_URL . 'assets/css/admin-photo-import.css',
+            array(),
+            CENTROMEX_GROCERY_VERSION
+        );
+
+        wp_enqueue_script(
+            'centromex-photo-upload',
+            CENTROMEX_GROCERY_URL . 'assets/js/photo-upload.js',
+            array('jquery'),
+            CENTROMEX_GROCERY_VERSION,
+            true
+        );
+
+        wp_localize_script('centromex-photo-upload', 'centromexPhotoImport', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('centromex-photo-import'),
+            'maxFileSize' => 10 * 1024 * 1024, // 10MB
+            'maxFiles' => 10,
+            'strings' => array(
+                'uploadError' => __('Upload failed. Please try again.', 'centromex-grocery'),
+                'fileTooLarge' => __('File is too large. Max size is 10MB.', 'centromex-grocery'),
+                'tooManyFiles' => __('Too many files. Max 10 images per batch.', 'centromex-grocery'),
+                'invalidFileType' => __('Invalid file type. Only JPG, PNG, and WEBP allowed.', 'centromex-grocery'),
+            )
+        ));
+    }
+
+    /**
+     * AJAX handler for photo uploads
+     */
+    public function ajax_upload_photos() {
+        check_ajax_referer('centromex-photo-import', 'nonce');
+
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(['message' => 'Unauthorized'], 403);
+        }
+
+        if (empty($_FILES['photos'])) {
+            wp_send_json_error(['message' => 'No files uploaded'], 400);
+        }
+
+        try {
+            $batch_id = 'batch_' . date('Y-m-d_His');
+            $uploaded_files = $_FILES['photos'];
+            $total_files = count($uploaded_files['name']);
+
+            if ($total_files > 10) {
+                wp_send_json_error(['message' => 'Too many files. Max 10 per batch.'], 400);
+            }
+
+            $image_processor = new Centromex_Image_Processor();
+            $importer = new Centromex_Photo_Importer();
+
+            $importer->init_batch($batch_id, $total_files);
+
+            $queued = 0;
+
+            for ($i = 0; $i < $total_files; $i++) {
+                if ($uploaded_files['error'][$i] !== UPLOAD_ERR_OK) {
+                    error_log("Centromex: Upload error for file $i: " . $uploaded_files['error'][$i]);
+                    continue;
+                }
+
+                $tmp_path = $uploaded_files['tmp_name'][$i];
+                $original_name = $uploaded_files['name'][$i];
+
+                // Store in source directory
+                $stored = $image_processor->store_source_image($tmp_path, $original_name);
+
+                // Queue for processing
+                Centromex_Import_Queue::queue_image(
+                    $stored['path'],
+                    $stored['hash'],
+                    $batch_id
+                );
+
+                $queued++;
+            }
+
+            // Queue batch completion
+            Centromex_Import_Queue::queue_batch_complete($batch_id);
+
+            wp_send_json_success([
+                'batch_id' => $batch_id,
+                'queued' => $queued,
+                'message' => sprintf(__('%d images queued for processing', 'centromex-grocery'), $queued)
+            ]);
+
+        } catch (Exception $e) {
+            error_log("Centromex: Upload error: " . $e->getMessage());
+            wp_send_json_error(['message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * AJAX handler for progress checking
+     */
+    public function ajax_get_progress() {
+        check_ajax_referer('centromex-photo-import', 'nonce');
+
+        if (!current_user_can('manage_woocommerce')) {
+            wp_send_json_error(['message' => 'Unauthorized'], 403);
+        }
+
+        $batch_id = isset($_GET['batch_id']) ? sanitize_text_field($_GET['batch_id']) : '';
+
+        if (empty($batch_id)) {
+            wp_send_json_error(['message' => 'Missing batch_id'], 400);
+        }
+
+        $progress = get_transient("centromex_import_{$batch_id}");
+
+        if (!$progress) {
+            wp_send_json_error(['message' => 'Batch not found'], 404);
+        }
+
+        // Get current counts from transients
+        $progress['processed_images'] = get_transient("centromex_import_{$batch_id}_processed") ?: 0;
+        $progress['total_products'] = get_transient("centromex_import_{$batch_id}_total_products") ?: 0;
+        $progress['verified_products'] = get_transient("centromex_import_{$batch_id}_verified") ?: 0;
+        $progress['review_products'] = get_transient("centromex_import_{$batch_id}_needs_review") ?: 0;
+
+        wp_send_json_success($progress);
     }
 }
 

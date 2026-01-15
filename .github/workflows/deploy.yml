@@ -9,13 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install Sprites CLI
         run: curl -fsSL https://sprites.dev/install.sh | bash
 
       - name: Configure Sprites Auth
         run: ~/.local/bin/sprite auth setup --token "${{ secrets.SPRITES_TOKEN }}"
 
-      - name: Deploy
+      - name: Deploy Bot
         run: |
           export PATH="$HOME/.local/bin:$PATH"
 
@@ -32,4 +35,26 @@ jobs:
           sleep 3
 
           # Verify
-          curl -f https://centromex-bot-74l.sprites.app/health && echo " - Deploy successful!"
+          curl -f https://centromex-bot-74l.sprites.app/health && echo " - Bot deploy successful!"
+
+      - name: Deploy WordPress Plugin
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # Create tarball of plugin
+          cd woocommerce-store/wp-content/plugins
+          tar -czf /tmp/centromex-grocery.tar.gz centromex-grocery/
+
+          # Remove old plugin directory on sprite
+          sprite -s centromex-grocery exec rm -rf /home/sprite/wordpress/wp-content/plugins/centromex-grocery || true
+
+          # Upload and extract plugin
+          cat /tmp/centromex-grocery.tar.gz | sprite -s centromex-grocery exec sh -c 'cd /home/sprite/wordpress/wp-content/plugins && tar -xzf -'
+
+          # Configure Replicate API token in wp-config.php
+          sprite -s centromex-grocery exec sh -c "grep -q 'CENTROMEX_REPLICATE_API_TOKEN' /home/sprite/wordpress/wp-config.php || sed -i \"/\\/\\* That's all, stop editing\\!/i define('CENTROMEX_REPLICATE_API_TOKEN', getenv('REPLICATE_API_TOKEN'));\" /home/sprite/wordpress/wp-config.php"
+
+          # Set environment variable for WordPress
+          sprite -s centromex-grocery exec sh -c "echo 'export REPLICATE_API_TOKEN=\"${{ secrets.REPLICATE_API_TOKEN }}\"' >> /home/sprite/.bashrc"
+
+          echo "WordPress plugin deployed successfully!"
