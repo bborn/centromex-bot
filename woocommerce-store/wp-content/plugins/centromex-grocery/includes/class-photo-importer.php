@@ -168,7 +168,7 @@ class Centromex_Photo_Importer {
         // Step 3: Validate with Open Food Facts
         $status = 'needs_review';
         $upc = '';
-        $categories = '';
+        $categories = isset($product_info['category']) ? [$product_info['category']] : [];
         $description = '';
         $final_name = $full_name;
         $final_brand = $brand;
@@ -182,7 +182,10 @@ class Centromex_Photo_Importer {
             $upc = isset($validation['off_code']) ? $validation['off_code'] : '';
             $final_name = isset($validation['off_name']) ? $validation['off_name'] : $full_name;
             $final_brand = isset($validation['off_brand']) ? $validation['off_brand'] : $brand;
-            $categories = isset($validation['off_categories']) ? $validation['off_categories'] : '';
+            // Use Open Food Facts categories if available, otherwise keep LLM category
+            if (isset($validation['off_categories']) && !empty($validation['off_categories'])) {
+                $categories = is_array($validation['off_categories']) ? $validation['off_categories'] : [$validation['off_categories']];
+            }
         } else {
             error_log("Centromex: NOT IN DATABASE - marking for review");
         }

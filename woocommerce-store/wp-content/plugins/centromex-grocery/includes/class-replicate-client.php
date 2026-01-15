@@ -115,11 +115,27 @@ CRITICAL: You must identify:
 2. PRODUCT NAME - the specific product
 3. SIZE - weight or volume if visible (e.g., "16 oz", "450ml")
 4. ESTIMATED PRICE - estimate a reasonable US retail price
+5. CATEGORY - assign one category from the list below
+
+CATEGORIES (choose ONE that best fits):
+- Snacks & Chips
+- Beverages
+- Dairy & Eggs
+- Meat & Seafood
+- Bakery & Bread
+- Pantry & Canned Goods
+- Condiments & Sauces
+- Frozen Foods
+- Fresh Produce
+- Breakfast & Cereal
+- International Foods
+- Candy & Sweets
+- Health & Personal Care
 
 Examples:
-- Brand: "Goya", Product: "Mango Nectar", Size: "9.6 oz", Price: 1.49
-- Brand: "El Mexicano", Product: "Crema Mexicana", Size: "15 oz", Price: 4.99
-- Brand: "Alpina", Product: "Avena Original", Size: "250ml", Price: 2.29
+- Brand: "Goya", Product: "Mango Nectar", Size: "9.6 oz", Category: "Beverages", Price: 1.49
+- Brand: "El Mexicano", Product: "Crema Mexicana", Size: "15 oz", Category: "Dairy & Eggs", Price: 4.99
+- Brand: "Cheetos", Product: "Puffs", Size: "8 oz", Category: "Snacks & Chips", Price: 3.99
 
 PRICING GUIDELINES (USD):
 - Small juice/nectar bottles (8-12 oz): $1.00 - $2.00
@@ -129,20 +145,23 @@ PRICING GUIDELINES (USD):
 - Cream/Crema (large): $5.00 - $8.00
 - Cheese: $4.00 - $8.00
 - Meat/Chorizo: $5.00 - $10.00
+- Snacks (8-12 oz): $3.00 - $5.00
 
-For fresh produce: Brand="Fresh", product_type="produce"
+For fresh produce: Brand="Fresh", product_type="produce", category="Fresh Produce"
 
 RULES:
 - If you cannot clearly read a brand name, set is_product=false
 - Estimate price based on product type, size, and brand positioning
+- Always assign a category from the list above
 
-Return ONLY valid JSON with these exact fields:
+Return ONLY the JSON object, no markdown formatting:
 {
   "brand": "brand name",
   "product_name": "product name",
   "full_name": "brand + product name",
   "is_product": true or false,
   "product_type": "packaged" | "produce" | "meat" | "bakery",
+  "category": "category from list above",
   "size": "size string",
   "estimated_price_usd": 0.00
 }
@@ -162,13 +181,28 @@ PROMPT;
             return ['is_product' => false];
         }
 
-        // Parse JSON from output
-        $output = is_array($prediction['output']) ? implode('', $prediction['output']) : $prediction['output'];
+        // Parse JSON from output - Gemini returns array of text parts
+        if (is_array($prediction['output'])) {
+            // Join all text parts
+            $output = '';
+            foreach ($prediction['output'] as $part) {
+                if (is_string($part)) {
+                    $output .= $part;
+                } elseif (isset($part['text'])) {
+                    $output .= $part['text'];
+                }
+            }
+        } else {
+            $output = $prediction['output'];
+        }
 
-        // Extract JSON from markdown code blocks if present
-        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $output, $matches)) {
-            $json_str = $matches[1];
-        } elseif (preg_match('/(\{.*\})/s', $output, $matches)) {
+        // Clean up output - remove markdown code blocks
+        $output = trim($output);
+        $output = preg_replace('/^```(?:json)?\s*/s', '', $output);
+        $output = preg_replace('/\s*```$/s', '', $output);
+
+        // Extract JSON object
+        if (preg_match('/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s', $output, $matches)) {
             $json_str = $matches[1];
         } else {
             $json_str = $output;
@@ -177,7 +211,7 @@ PROMPT;
         $data = json_decode($json_str, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Centromex: Failed to parse LLM JSON response: " . $output);
+            error_log("Centromex: Failed to parse LLM JSON response: " . substr($output, 0, 500));
             return ['is_product' => false];
         }
 
@@ -238,12 +272,27 @@ PROMPT;
             return ['is_match' => false, 'reason' => 'LLM error'];
         }
 
-        $output = is_array($prediction['output']) ? implode('', $prediction['output']) : $prediction['output'];
+        // Parse JSON from output - Gemini returns array of text parts
+        if (is_array($prediction['output'])) {
+            $output = '';
+            foreach ($prediction['output'] as $part) {
+                if (is_string($part)) {
+                    $output .= $part;
+                } elseif (isset($part['text'])) {
+                    $output .= $part['text'];
+                }
+            }
+        } else {
+            $output = $prediction['output'];
+        }
 
-        // Extract JSON
-        if (preg_match('/```(?:json)?\s*(\{.*?\})\s*```/s', $output, $matches)) {
-            $json_str = $matches[1];
-        } elseif (preg_match('/(\{.*\})/s', $output, $matches)) {
+        // Clean up output - remove markdown code blocks
+        $output = trim($output);
+        $output = preg_replace('/^```(?:json)?\s*/s', '', $output);
+        $output = preg_replace('/\s*```$/s', '', $output);
+
+        // Extract JSON object
+        if (preg_match('/(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/s', $output, $matches)) {
             $json_str = $matches[1];
         } else {
             $json_str = $output;
@@ -252,7 +301,7 @@ PROMPT;
         $data = json_decode($json_str, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            error_log("Centromex: Failed to parse validation JSON: " . $output);
+            error_log("Centromex: Failed to parse validation JSON: " . substr($output, 0, 500));
             return ['is_match' => false, 'reason' => 'Parse error'];
         }
 
