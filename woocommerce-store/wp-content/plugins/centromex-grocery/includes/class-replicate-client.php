@@ -148,7 +148,7 @@ Return ONLY valid JSON with these exact fields:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('google-deepmind/gemini-2.0-flash-exp:a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
+        $prediction = $this->create_prediction('a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
             'prompt' => $prompt,
             'image' => $base64_image,
             'max_tokens' => 500,
@@ -225,7 +225,7 @@ Return ONLY valid JSON:
 }
 PROMPT;
 
-        $prediction = $this->create_prediction('google-deepmind/gemini-2.0-flash-exp:a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
+        $prediction = $this->create_prediction('a15fa0c0bfcc394d5d127e4bce7fb043eee779d352b580884f6c3e00ae89e853', [
             'prompt' => $prompt,
             'max_tokens' => 200,
             'temperature' => 0.1
