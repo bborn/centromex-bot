@@ -48,13 +48,16 @@ class Centromex_Replicate_Client {
 
         $contents = [];
         if ($base64_image) {
+            // Strip data URI prefix - Gemini expects raw base64 only
+            $base64_only = preg_replace('/^data:image\/[^;]+;base64,/', '', $base64_image);
+
             $contents[] = [
                 'parts' => [
                     ['text' => $prompt],
                     [
                         'inline_data' => [
                             'mime_type' => 'image/jpeg',
-                            'data' => $base64_image
+                            'data' => $base64_only
                         ]
                     ]
                 ]
