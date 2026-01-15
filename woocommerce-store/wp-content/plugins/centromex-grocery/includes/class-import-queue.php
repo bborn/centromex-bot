@@ -71,13 +71,22 @@ class Centromex_Import_Queue {
     /**
      * Handle image processing job
      *
-     * @param array $args Job arguments
+     * @param array $args Job arguments (passed as first element by Action Scheduler)
      */
     public static function handle_process_image($args) {
         try {
-            $image_path = $args['image_path'];
-            $image_hash = $args['image_hash'];
-            $batch_id = $args['batch_id'];
+            // Action Scheduler wraps args in an array, get first element
+            if (is_array($args) && isset($args[0]) && is_array($args[0])) {
+                $args = $args[0];
+            }
+
+            $image_path = isset($args['image_path']) ? $args['image_path'] : '';
+            $image_hash = isset($args['image_hash']) ? $args['image_hash'] : '';
+            $batch_id = isset($args['batch_id']) ? $args['batch_id'] : '';
+
+            if (empty($image_path) || empty($image_hash) || empty($batch_id)) {
+                throw new Exception('Missing required arguments');
+            }
 
             error_log("Centromex: Starting job for image: " . basename($image_path));
 
@@ -99,10 +108,20 @@ class Centromex_Import_Queue {
     /**
      * Handle batch completion
      *
-     * @param array $args Job arguments
+     * @param array $args Job arguments (passed as first element by Action Scheduler)
      */
     public static function handle_complete_batch($args) {
-        $batch_id = $args['batch_id'];
+        // Action Scheduler wraps args in an array, get first element
+        if (is_array($args) && isset($args[0]) && is_array($args[0])) {
+            $args = $args[0];
+        }
+
+        $batch_id = isset($args['batch_id']) ? $args['batch_id'] : '';
+
+        if (empty($batch_id)) {
+            error_log('Centromex: Missing batch_id in completion handler');
+            return;
+        }
 
         error_log("Centromex: Completing batch: $batch_id");
 
