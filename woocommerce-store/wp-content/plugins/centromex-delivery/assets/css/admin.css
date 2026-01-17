@@ -1,0 +1,306 @@
+/**
+ * Centromex Delivery - Admin Styles
+ */
+
+/* Dashboard Stats */
+.delivery-stats {
+    display: flex;
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stat-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    min-width: 120px;
+}
+
+.stat-box .stat-number {
+    display: block;
+    font-size: 36px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.stat-box .stat-label {
+    display: block;
+    color: #646970;
+    margin-top: 5px;
+}
+
+.stat-box.stat-ready {
+    border-color: #0073aa;
+    background: #f0f6fc;
+}
+
+.stat-box.stat-ready .stat-number {
+    color: #0073aa;
+}
+
+.stat-box.stat-claimed {
+    border-color: #dba617;
+    background: #fcf9e8;
+}
+
+.stat-box.stat-claimed .stat-number {
+    color: #996800;
+}
+
+.stat-box.stat-delivered {
+    border-color: #00a32a;
+    background: #edfaef;
+}
+
+.stat-box.stat-delivered .stat-number {
+    color: #00a32a;
+}
+
+/* Dashboard Columns */
+.delivery-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.delivery-column {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.delivery-column h2 {
+    margin: 0;
+    padding: 15px;
+    background: #f6f7f7;
+    border-bottom: 1px solid #ccd0d4;
+    font-size: 14px;
+}
+
+.delivery-column .order-list {
+    padding: 10px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Order Cards */
+.order-card {
+    background: #fff;
+    border: 1px solid #dcdcde;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
+
+.order-card:last-child {
+    margin-bottom: 0;
+}
+
+.order-card.ready {
+    border-left: 4px solid #0073aa;
+}
+
+.order-card.in-progress {
+    border-left: 4px solid #dba617;
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.order-header strong {
+    font-size: 14px;
+}
+
+.order-total {
+    color: #646970;
+}
+
+.order-items {
+    color: #646970;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.order-meta {
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    color: #646970;
+    margin-bottom: 8px;
+}
+
+.zone-badge {
+    display: inline-block;
+    background: #f0f0f1;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-badge.claimed {
+    background: #fcf9e8;
+    color: #996800;
+}
+
+.status-badge.out_for_delivery {
+    background: #edfaef;
+    color: #00a32a;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.order-actions .zone-select {
+    flex: 1;
+}
+
+.order-actions .bag-count {
+    width: 60px;
+}
+
+.order-actions .mark-ready-btn {
+    white-space: nowrap;
+}
+
+.driver-info {
+    background: #f6f7f7;
+    padding: 8px;
+    border-radius: 3px;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.driver-info strong {
+    display: block;
+}
+
+.driver-info span {
+    color: #646970;
+}
+
+.ready-time {
+    color: #d63638;
+}
+
+.no-orders {
+    color: #646970;
+    text-align: center;
+    padding: 20px;
+    margin: 0;
+}
+
+/* Delivery Status Badge in Orders List */
+.delivery-status-badge {
+    display: inline-block;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+/* Drivers Page */
+.centromex-drivers-page .driver-section {
+    margin-bottom: 30px;
+}
+
+.centromex-drivers-page .count {
+    font-weight: normal;
+    color: #646970;
+}
+
+.pending-section h2 {
+    color: #d63638;
+}
+
+.driver-portal-info {
+    background: #f0f6fc;
+    border: 1px solid #c3c4c7;
+    border-left: 4px solid #0073aa;
+    padding: 15px;
+    margin-top: 30px;
+}
+
+.driver-portal-info code {
+    display: block;
+    background: #fff;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+/* Zones Page */
+.zones-container {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+@media (max-width: 960px) {
+    .delivery-columns {
+        grid-template-columns: 1fr;
+    }
+
+    .zones-container {
+        grid-template-columns: 1fr;
+    }
+
+    .delivery-stats {
+        flex-wrap: wrap;
+    }
+
+    .stat-box {
+        flex: 1;
+        min-width: 100px;
+    }
+}
+
+/* Order Meta Box */
+.centromex-delivery-meta {
+    padding: 10px 0;
+}
+
+.centromex-delivery-meta p {
+    margin-bottom: 15px;
+}
+
+.centromex-delivery-meta label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.delivery-claim-info {
+    background: #fcf9e8;
+    border: 1px solid #dba617;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.delivery-claim-info h4 {
+    margin: 0 0 5px;
+}
+
+.delivery-claim-info p {
+    margin: 0;
+}
