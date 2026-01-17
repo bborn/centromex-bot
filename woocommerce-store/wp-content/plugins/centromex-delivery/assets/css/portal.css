@@ -1,0 +1,335 @@
+/**
+ * Centromex Delivery - Driver Portal Styles
+ */
+
+.centromex-driver-portal {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.portal-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.portal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.portal-header h2 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.portal-header p {
+    margin: 5px 0 0;
+    color: #666;
+    width: 100%;
+}
+
+/* Buttons */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+}
+
+.btn-primary {
+    background: #0073aa;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #005a87;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn-pickup {
+    background: #0073aa;
+    color: #fff;
+}
+
+.btn-delivered {
+    background: #00a32a;
+    color: #fff;
+}
+
+.btn-cancel {
+    background: #f0f0f1;
+    color: #d63638;
+}
+
+/* Auth Tabs */
+.auth-tabs {
+    display: flex;
+    border-bottom: 2px solid #f0f0f1;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+}
+
+.tab-btn.active {
+    color: #0073aa;
+    border-bottom-color: #0073aa;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    border-color: #0073aa;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0,115,170,0.2);
+}
+
+.form-note {
+    color: #666;
+    font-size: 14px;
+    margin-top: 15px;
+}
+
+/* Zone Filter */
+.zone-filter {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.zone-filter label {
+    font-weight: 500;
+}
+
+.zone-filter select {
+    flex: 1;
+    min-width: 150px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* Orders List */
+.orders-list {
+    min-height: 100px;
+}
+
+.orders-list .loading {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+}
+
+.orders-list .no-orders {
+    text-align: center;
+    color: #666;
+    padding: 30px;
+    background: #f9f9f9;
+    border-radius: 6px;
+}
+
+/* Order Cards */
+.order-card {
+    background: #f9f9f9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    border-left: 4px solid #0073aa;
+}
+
+.order-card.my-order {
+    border-left-color: #dba617;
+}
+
+.order-card.my-order.picked_up {
+    border-left-color: #00a32a;
+}
+
+.order-card .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.order-card .order-number {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.order-card .zone-badge {
+    display: inline-block;
+    background: #e0e0e0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.order-card .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.order-card .status-badge.claimed {
+    background: #fcf9e8;
+    color: #996800;
+}
+
+.order-card .status-badge.picked_up {
+    background: #edfaef;
+    color: #00a32a;
+}
+
+.order-card .order-details {
+    display: flex;
+    gap: 15px;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.order-card .bag-count::before {
+    content: "📦 ";
+}
+
+.order-card .ready-time::before {
+    content: "⏱️ ";
+}
+
+.order-card .order-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.order-card .order-actions .btn {
+    flex: 1;
+    min-width: 80px;
+}
+
+.order-card .btn-claim {
+    background: #0073aa;
+    color: #fff;
+    width: 100%;
+}
+
+/* My Orders Section */
+.my-orders-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.my-orders-section h3,
+.available-orders-section h3 {
+    margin: 0 0 15px;
+    font-size: 18px;
+}
+
+/* Privacy Notice */
+.privacy-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.privacy-notice p {
+    margin: 0;
+}
+
+/* Messages */
+.message {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .centromex-driver-portal {
+        padding: 10px;
+    }
+
+    .portal-section {
+        padding: 16px;
+    }
+
+    .portal-header h2 {
+        font-size: 20px;
+    }
+
+    .order-card .order-actions {
+        flex-direction: column;
+    }
+
+    .order-card .order-actions .btn {
+        width: 100%;
+    }
+}
