@@ -1,0 +1,137 @@
+/**
+ * Admin styles for Volunteer Picker
+ */
+
+.centromex-picker-admin {
+    max-width: 1200px;
+}
+
+.centromex-picker-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.centromex-card {
+    background: white;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
+}
+
+.centromex-card h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    color: #1d2327;
+}
+
+.centromex-card h3 {
+    color: #1d2327;
+    margin-top: 20px;
+}
+
+.picker-url-box {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.picker-url-box input {
+    flex: 1;
+    font-family: monospace;
+}
+
+.picker-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: #f0f0f1;
+    padding: 15px 20px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 100px;
+}
+
+.stat-value {
+    display: block;
+    font-size: 28px;
+    font-weight: 600;
+    color: #2e7d32;
+}
+
+.stat-label {
+    display: block;
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
+.picker-instructions {
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+.picker-instructions li {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.picker-instructions ul {
+    margin-top: 8px;
+    margin-left: 20px;
+    list-style-type: disc;
+}
+
+.picker-features {
+    margin: 15px 0;
+    padding-left: 20px;
+    list-style-type: disc;
+}
+
+.picker-features li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+/* Form styling */
+.centromex-card .form-table th {
+    width: 150px;
+    padding-left: 0;
+}
+
+.centromex-card .form-table td {
+    padding-left: 0;
+}
+
+/* QR Code */
+.picker-qr {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.picker-qr img {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+    .centromex-picker-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .picker-url-box {
+        flex-direction: column;
+    }
+
+    .centromex-card .form-table th {
+        width: auto;
+    }
+}
